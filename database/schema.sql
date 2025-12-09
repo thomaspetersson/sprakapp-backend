@@ -1,8 +1,6 @@
 -- SpråkApp Database Schema for MariaDB
 -- Version: 1.0
-
-CREATE DATABASE IF NOT EXISTS sprakapp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE sprakapp;
+-- Note: Run this script on your existing database. Tables use 'sprakapp_' prefix.
 
 -- Users table
 CREATE TABLE IF NOT EXISTS sprakapp_users (
