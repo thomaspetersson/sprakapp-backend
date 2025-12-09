@@ -60,12 +60,10 @@ function getCourses($db) {
         
         $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        http_response_code(200);
-        echo json_encode(['courses' => $courses]);
+        sendSuccess($courses);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to fetch courses: ' . $e->getMessage()]);
+        sendError('Failed to fetch courses: ' . $e->getMessage(), 500);
     }
 }
 
@@ -83,9 +81,7 @@ function getCourse($db, $id) {
         $course = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$course) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Course not found']);
-            return;
+            sendError('Course not found', 404);
         }
         
         // Get chapters
@@ -95,8 +91,7 @@ function getCourse($db, $id) {
         $stmt->execute();
         $course['chapters'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        http_response_code(200);
-        echo json_encode(['course' => $course]);
+        sendSuccess($course);
         
     } catch (Exception $e) {
         http_response_code(500);
@@ -108,9 +103,7 @@ function createCourse($db) {
     $data = json_decode(file_get_contents("php://input"));
     
     if (!isset($data->title)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Title is required']);
-        return;
+        sendError('Title is required', 400);
     }
 
     try {
@@ -131,12 +124,10 @@ function createCourse($db) {
         $stmt->bindParam(':order_index', $order_index);
         $stmt->execute();
         
-        http_response_code(201);
-        echo json_encode(['id' => $courseId, 'message' => 'Course created']);
+        sendSuccess(['id' => $courseId, 'message' => 'Course created'], 201);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to create course: ' . $e->getMessage()]);
+        sendError('Failed to create course: ' . $e->getMessage(), 500);
     }
 }
 
@@ -173,9 +164,7 @@ function updateCourse($db, $id) {
         }
         
         if (empty($fields)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'No fields to update']);
-            return;
+            sendError('No fields to update', 400);
         }
         
         $query = "UPDATE sprakapp_courses SET " . implode(', ', $fields) . " WHERE id = :id";
@@ -187,12 +176,10 @@ function updateCourse($db, $id) {
         
         $stmt->execute();
         
-        http_response_code(200);
-        echo json_encode(['message' => 'Course updated']);
+        sendSuccess(['message' => 'Course updated']);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to update course: ' . $e->getMessage()]);
+        sendError('Failed to update course: ' . $e->getMessage(), 500);
     }
 }
 
@@ -203,11 +190,9 @@ function deleteCourse($db, $id) {
         $stmt->bindParam(':id', $id);
         $stmt->execute();
         
-        http_response_code(200);
-        echo json_encode(['message' => 'Course deleted']);
+        sendSuccess(['message' => 'Course deleted']);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to delete course: ' . $e->getMessage()]);
+        sendError('Failed to delete course: ' . $e->getMessage(), 500);
     }
 }

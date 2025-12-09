@@ -34,9 +34,7 @@ function register($db) {
     $data = json_decode(file_get_contents("php://input"));
     
     if (!isset($data->email) || !isset($data->password)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Email and password required']);
-        return;
+        sendError('Email and password required', 400);
     }
 
     try {
@@ -47,9 +45,7 @@ function register($db) {
         $stmt->execute();
         
         if ($stmt->rowCount() > 0) {
-            http_response_code(409);
-            echo json_encode(['error' => 'User already exists']);
-            return;
+            sendError('User already exists', 409);
         }
 
         // Create user
@@ -75,21 +71,20 @@ function register($db) {
         
         $token = Auth::generateToken($userId, $data->email, 'user');
         
-        http_response_code(201);
-        echo json_encode([
+        sendSuccess([
             'user' => [
                 'id' => $userId,
-                'email' => $data->email
+                'email' => $data->email,
+                'role' => 'user'
             ],
             'token' => $token
-        ]);
+        ], 201);
         
     } catch (Exception $e) {
         if ($db->inTransaction()) {
             $db->rollBack();
         }
-        http_response_code(500);
-        echo json_encode(['error' => 'Registration failed: ' . $e->getMessage()]);
+        sendError('Registration failed: ' . $e->getMessage(), 500);
     }
 }
 
@@ -97,9 +92,7 @@ function login($db) {
     $data = json_decode(file_get_contents("php://input"));
     
     if (!isset($data->email) || !isset($data->password)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Email and password required']);
-        return;
+        sendError('Email and password required', 400);
     }
 
     try {
@@ -112,23 +105,18 @@ function login($db) {
         $stmt->execute();
         
         if ($stmt->rowCount() === 0) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Invalid credentials']);
-            return;
+            sendError('Invalid credentials', 401);
         }
         
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!Auth::verifyPassword($data->password, $user['password_hash'])) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Invalid credentials']);
-            return;
+            sendError('Invalid credentials', 401);
         }
         
         $token = Auth::generateToken($user['id'], $user['email'], $user['role'] ?? 'user');
         
-        http_response_code(200);
-        echo json_encode([
+        sendSuccess([
             'user' => [
                 'id' => $user['id'],
                 'email' => $user['email'],
@@ -138,8 +126,7 @@ function login($db) {
         ]);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Login failed: ' . $e->getMessage()]);
+        sendError('Login failed: ' . $e->getMessage(), 500);
     }
 }
 
@@ -158,22 +145,17 @@ function getCurrentUser($db) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$user) {
-            http_response_code(404);
-            echo json_encode(['error' => 'User not found']);
-            return;
+            sendError('User not found', 404);
         }
         
-        http_response_code(200);
-        echo json_encode(['user' => $user]);
+        sendSuccess($user);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to fetch user: ' . $e->getMessage()]);
+        sendError('Failed to fetch user: ' . $e->getMessage(), 500);
     }
 }
 
 function logout($db) {
     $decoded = Auth::verifyToken();
-    http_response_code(200);
-    echo json_encode(['message' => 'Logged out successfully']);
+    sendSuccess(['message' => 'Logged out successfully']);
 }

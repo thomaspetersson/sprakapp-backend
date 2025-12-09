@@ -47,9 +47,7 @@ function getExercises($db) {
     $chapterId = $_GET['chapter_id'] ?? null;
     
     if (!$chapterId) {
-        http_response_code(400);
-        echo json_encode(['error' => 'chapter_id required']);
-        return;
+        sendError('chapter_id required', 400);
     }
     
     try {
@@ -67,12 +65,10 @@ function getExercises($db) {
             }
         }
         
-        http_response_code(200);
-        echo json_encode(['exercises' => $exercises]);
+        sendSuccess($exercises);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to fetch exercises: ' . $e->getMessage()]);
+        sendError('Failed to fetch exercises: ' . $e->getMessage(), 500);
     }
 }
 
@@ -80,9 +76,7 @@ function createExercise($db) {
     $data = json_decode(file_get_contents("php://input"));
     
     if (!isset($data->chapter_id) || !isset($data->type) || !isset($data->question) || !isset($data->correct_answer)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'chapter_id, type, question, and correct_answer are required']);
-        return;
+        sendError('chapter_id, type, question, and correct_answer are required', 400);
     }
 
     try {
@@ -105,12 +99,10 @@ function createExercise($db) {
         $stmt->bindParam(':order_index', $order_index);
         $stmt->execute();
         
-        http_response_code(201);
-        echo json_encode(['id' => $exerciseId, 'message' => 'Exercise created']);
+        sendSuccess(['id' => $exerciseId, 'message' => 'Exercise created'], 201);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to create exercise: ' . $e->getMessage()]);
+        sendError('Failed to create exercise: ' . $e->getMessage(), 500);
     }
 }
 
@@ -147,9 +139,7 @@ function updateExercise($db, $id) {
         }
         
         if (empty($fields)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'No fields to update']);
-            return;
+            sendError('No fields to update', 400);
         }
         
         $query = "UPDATE sprakapp_exercises SET " . implode(', ', $fields) . " WHERE id = :id";
@@ -161,12 +151,10 @@ function updateExercise($db, $id) {
         
         $stmt->execute();
         
-        http_response_code(200);
-        echo json_encode(['message' => 'Exercise updated']);
+        sendSuccess(['message' => 'Exercise updated']);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to update exercise: ' . $e->getMessage()]);
+        sendError('Failed to update exercise: ' . $e->getMessage(), 500);
     }
 }
 
@@ -177,11 +165,9 @@ function deleteExercise($db, $id) {
         $stmt->bindParam(':id', $id);
         $stmt->execute();
         
-        http_response_code(200);
-        echo json_encode(['message' => 'Exercise deleted']);
+        sendSuccess(['message' => 'Exercise deleted']);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to delete exercise: ' . $e->getMessage()]);
+        sendError('Failed to delete exercise: ' . $e->getMessage(), 500);
     }
 }

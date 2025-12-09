@@ -25,5 +25,25 @@ ini_set('log_errors', '1');
 // Timezone
 date_default_timezone_set('Europe/Stockholm');
 
+// Standard API response helpers
+function sendSuccess($data, $statusCode = 200) {
+    http_response_code($statusCode);
+    echo json_encode([
+        'success' => true,
+        'data' => $data
+    ]);
+    exit();
+}
+
+function sendError($message, $statusCode = 400) {
+    http_response_code($statusCode);
+    echo json_encode([
+        'success' => false,
+        'error' => $message,
+        'status' => $statusCode
+    ]);
+    exit();
+}
+
 // Include database
 require_once __DIR__ . '/database.php';

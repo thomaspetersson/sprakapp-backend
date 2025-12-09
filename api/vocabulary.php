@@ -47,9 +47,7 @@ function getVocabulary($db) {
     $chapterId = $_GET['chapter_id'] ?? null;
     
     if (!$chapterId) {
-        http_response_code(400);
-        echo json_encode(['error' => 'chapter_id required']);
-        return;
+        sendError('chapter_id required', 400);
     }
     
     try {
@@ -60,12 +58,10 @@ function getVocabulary($db) {
         
         $vocabulary = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        http_response_code(200);
-        echo json_encode(['vocabulary' => $vocabulary]);
+        sendSuccess($vocabulary);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to fetch vocabulary: ' . $e->getMessage()]);
+        sendError('Failed to fetch vocabulary: ' . $e->getMessage(), 500);
     }
 }
 
@@ -73,9 +69,7 @@ function createVocabulary($db) {
     $data = json_decode(file_get_contents("php://input"));
     
     if (!isset($data->chapter_id) || !isset($data->word) || !isset($data->translation)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'chapter_id, word, and translation are required']);
-        return;
+        sendError('chapter_id, word, and translation are required', 400);
     }
 
     try {
@@ -99,12 +93,10 @@ function createVocabulary($db) {
         $stmt->bindParam(':order_index', $order_index);
         $stmt->execute();
         
-        http_response_code(201);
-        echo json_encode(['id' => $vocabId, 'message' => 'Vocabulary created']);
+        sendSuccess(['id' => $vocabId, 'message' => 'Vocabulary created'], 201);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to create vocabulary: ' . $e->getMessage()]);
+        sendError('Failed to create vocabulary: ' . $e->getMessage(), 500);
     }
 }
 
@@ -141,9 +133,7 @@ function updateVocabulary($db, $id) {
         }
         
         if (empty($fields)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'No fields to update']);
-            return;
+            sendError('No fields to update', 400);
         }
         
         $query = "UPDATE sprakapp_vocabulary SET " . implode(', ', $fields) . " WHERE id = :id";
@@ -155,12 +145,10 @@ function updateVocabulary($db, $id) {
         
         $stmt->execute();
         
-        http_response_code(200);
-        echo json_encode(['message' => 'Vocabulary updated']);
+        sendSuccess(['message' => 'Vocabulary updated']);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to update vocabulary: ' . $e->getMessage()]);
+        sendError('Failed to update vocabulary: ' . $e->getMessage(), 500);
     }
 }
 
@@ -171,11 +159,9 @@ function deleteVocabulary($db, $id) {
         $stmt->bindParam(':id', $id);
         $stmt->execute();
         
-        http_response_code(200);
-        echo json_encode(['message' => 'Vocabulary deleted']);
+        sendSuccess(['message' => 'Vocabulary deleted']);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to delete vocabulary: ' . $e->getMessage()]);
+        sendError('Failed to delete vocabulary: ' . $e->getMessage(), 500);
     }
 }

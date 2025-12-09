@@ -63,12 +63,10 @@ function getChapters($db) {
         $stmt->execute();
         $chapters = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        http_response_code(200);
-        echo json_encode(['chapters' => $chapters]);
+        sendSuccess($chapters);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to fetch chapters: ' . $e->getMessage()]);
+        sendError('Failed to fetch chapters: ' . $e->getMessage(), 500);
     }
 }
 
@@ -82,9 +80,7 @@ function getChapter($db, $id) {
         $chapter = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$chapter) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Chapter not found']);
-            return;
+            sendError('Chapter not found', 404);
         }
         
         // Get vocabulary
@@ -109,12 +105,10 @@ function getChapter($db, $id) {
         }
         $chapter['exercises'] = $exercises;
         
-        http_response_code(200);
-        echo json_encode(['chapter' => $chapter]);
+        sendSuccess($chapter);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to fetch chapter: ' . $e->getMessage()]);
+        sendError('Failed to fetch chapter: ' . $e->getMessage(), 500);
     }
 }
 
@@ -122,9 +116,7 @@ function createChapter($db) {
     $data = json_decode(file_get_contents("php://input"));
     
     if (!isset($data->title) || !isset($data->course_id)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Title and course_id are required']);
-        return;
+        sendError('Title and course_id are required', 400);
     }
 
     try {
@@ -144,12 +136,10 @@ function createChapter($db) {
         $stmt->bindParam(':is_published', $is_published);
         $stmt->execute();
         
-        http_response_code(201);
-        echo json_encode(['id' => $chapterId, 'message' => 'Chapter created']);
+        sendSuccess(['id' => $chapterId, 'message' => 'Chapter created'], 201);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to create chapter: ' . $e->getMessage()]);
+        sendError('Failed to create chapter: ' . $e->getMessage(), 500);
     }
 }
 
@@ -178,9 +168,7 @@ function updateChapter($db, $id) {
         }
         
         if (empty($fields)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'No fields to update']);
-            return;
+            sendError('No fields to update', 400);
         }
         
         $query = "UPDATE sprakapp_chapters SET " . implode(', ', $fields) . " WHERE id = :id";
@@ -192,12 +180,10 @@ function updateChapter($db, $id) {
         
         $stmt->execute();
         
-        http_response_code(200);
-        echo json_encode(['message' => 'Chapter updated']);
+        sendSuccess(['message' => 'Chapter updated']);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to update chapter: ' . $e->getMessage()]);
+        sendError('Failed to update chapter: ' . $e->getMessage(), 500);
     }
 }
 
@@ -208,11 +194,9 @@ function deleteChapter($db, $id) {
         $stmt->bindParam(':id', $id);
         $stmt->execute();
         
-        http_response_code(200);
-        echo json_encode(['message' => 'Chapter deleted']);
+        sendSuccess(['message' => 'Chapter deleted']);
         
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to delete chapter: ' . $e->getMessage()]);
+        sendError('Failed to delete chapter: ' . $e->getMessage(), 500);
     }
 }
