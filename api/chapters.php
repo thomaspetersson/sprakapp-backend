@@ -1,6 +1,9 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../middleware/auth.php';
+require_once __DIR__ . '/../middleware/session-auth.php'; // TEMPORARILY DISABLED
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
@@ -15,30 +18,15 @@ switch ($method) {
         }
         break;
     case 'POST':
-        $decoded = Auth::verifyToken();
-        if ($decoded->role !== 'admin') {
-            http_response_code(403);
-            echo json_encode(['error' => 'Admin access required']);
-            return;
-        }
+        $decoded = SessionAuth::requireAdmin();
         createChapter($db);
         break;
     case 'PUT':
-        $decoded = Auth::verifyToken();
-        if ($decoded->role !== 'admin') {
-            http_response_code(403);
-            echo json_encode(['error' => 'Admin access required']);
-            return;
-        }
+        $decoded = SessionAuth::requireAdmin();
         updateChapter($db, $_GET['id']);
         break;
     case 'DELETE':
-        $decoded = Auth::verifyToken();
-        if ($decoded->role !== 'admin') {
-            http_response_code(403);
-            echo json_encode(['error' => 'Admin access required']);
-            return;
-        }
+        $decoded = SessionAuth::requireAdmin();
         deleteChapter($db, $_GET['id']);
         break;
     default:
@@ -52,11 +40,11 @@ function getChapters($db) {
     
     try {
         if ($courseId) {
-            $query = "SELECT * FROM sprakapp_chapters WHERE course_id = :course_id ORDER BY order_index ASC";
+            $query = "SELECT * FROM sprakapp_chapters WHERE course_id = :course_id ORDER BY order_number ASC";
             $stmt = $db->prepare($query);
             $stmt->bindParam(':course_id', $courseId);
         } else {
-            $query = "SELECT * FROM sprakapp_chapters ORDER BY order_index ASC";
+            $query = "SELECT * FROM sprakapp_chapters ORDER BY order_number ASC";
             $stmt = $db->prepare($query);
         }
         
@@ -122,16 +110,31 @@ function createChapter($db) {
     try {
         $chapterId = bin2hex(random_bytes(16));
         
-        $query = "INSERT INTO sprakapp_chapters (id, course_id, title, description, order_index, is_published) 
-                  VALUES (:id, :course_id, :title, :description, :order_index, :is_published)";
+        $query = "INSERT INTO sprakapp_chapters (id, course_id, title, description, order_number, target_text, translation, grammar_explanation, image_url, speech_voice_name, audio_file_url, speech_rate, is_published) 
+                  VALUES (:id, :course_id, :title, :description, :order_number, :target_text, :translation, :grammar_explanation, :image_url, :speech_voice_name, :audio_file_url, :speech_rate, :is_published)";
         
         $stmt = $db->prepare($query);
         $stmt->bindParam(':id', $chapterId);
         $stmt->bindParam(':course_id', $data->course_id);
         $stmt->bindParam(':title', $data->title);
-        $stmt->bindParam(':description', $data->description);
-        $order_index = $data->order_index ?? 0;
-        $stmt->bindParam(':order_index', $order_index);
+        $description = $data->description ?? null;
+        $stmt->bindParam(':description', $description);
+        $order_number = $data->order_number ?? 1;
+        $stmt->bindParam(':order_number', $order_number);
+        $target_text = $data->target_text ?? null;
+        $stmt->bindParam(':target_text', $target_text);
+        $translation = $data->translation ?? null;
+        $stmt->bindParam(':translation', $translation);
+        $grammar_explanation = $data->grammar_explanation ?? null;
+        $stmt->bindParam(':grammar_explanation', $grammar_explanation);
+        $image_url = $data->image_url ?? null;
+        $stmt->bindParam(':image_url', $image_url);
+        $speech_voice_name = $data->speech_voice_name ?? null;
+        $stmt->bindParam(':speech_voice_name', $speech_voice_name);
+        $audio_file_url = $data->audio_file_url ?? null;
+        $stmt->bindParam(':audio_file_url', $audio_file_url);
+        $speech_rate = $data->speech_rate ?? 1.00;
+        $stmt->bindParam(':speech_rate', $speech_rate);
         $is_published = isset($data->is_published) ? (int)$data->is_published : 0;
         $stmt->bindParam(':is_published', $is_published);
         $stmt->execute();
@@ -158,9 +161,37 @@ function updateChapter($db, $id) {
             $fields[] = "description = :description";
             $params[':description'] = $data->description;
         }
-        if (isset($data->order_index)) {
-            $fields[] = "order_index = :order_index";
-            $params[':order_index'] = $data->order_index;
+        if (isset($data->order_number)) {
+            $fields[] = "order_number = :order_number";
+            $params[':order_number'] = $data->order_number;
+        }
+        if (isset($data->target_text)) {
+            $fields[] = "target_text = :target_text";
+            $params[':target_text'] = $data->target_text;
+        }
+        if (isset($data->translation)) {
+            $fields[] = "translation = :translation";
+            $params[':translation'] = $data->translation;
+        }
+        if (isset($data->grammar_explanation)) {
+            $fields[] = "grammar_explanation = :grammar_explanation";
+            $params[':grammar_explanation'] = $data->grammar_explanation;
+        }
+        if (isset($data->image_url)) {
+            $fields[] = "image_url = :image_url";
+            $params[':image_url'] = $data->image_url;
+        }
+        if (isset($data->speech_voice_name)) {
+            $fields[] = "speech_voice_name = :speech_voice_name";
+            $params[':speech_voice_name'] = $data->speech_voice_name;
+        }
+        if (isset($data->audio_file_url)) {
+            $fields[] = "audio_file_url = :audio_file_url";
+            $params[':audio_file_url'] = $data->audio_file_url;
+        }
+        if (isset($data->speech_rate)) {
+            $fields[] = "speech_rate = :speech_rate";
+            $params[':speech_rate'] = $data->speech_rate;
         }
         if (isset($data->is_published)) {
             $fields[] = "is_published = :is_published";

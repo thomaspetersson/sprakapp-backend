@@ -31,12 +31,17 @@ CREATE TABLE IF NOT EXISTS sprakapp_courses (
     description TEXT,
     level ENUM('beginner', 'intermediate', 'advanced') DEFAULT 'beginner',
     language VARCHAR(10) DEFAULT 'sv',
+    cover_image VARCHAR(500),
     is_published BOOLEAN DEFAULT FALSE,
     order_index INT DEFAULT 0,
+    created_by VARCHAR(36),
+    speech_voice_name VARCHAR(255),
+    audio_file_url VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_published (is_published),
-    INDEX idx_language (language)
+    INDEX idx_language (language),
+    FOREIGN KEY (created_by) REFERENCES sprakapp_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Chapters table
@@ -45,12 +50,20 @@ CREATE TABLE IF NOT EXISTS sprakapp_chapters (
     course_id VARCHAR(36) NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    order_index INT DEFAULT 0,
+    order_number INT DEFAULT 1,
+    target_text TEXT,
+    translation TEXT,
+    grammar_explanation TEXT,
+    image_url VARCHAR(500),
+    speech_voice_name VARCHAR(255),
+    audio_file_url VARCHAR(500),
+    speech_rate DECIMAL(3,2) DEFAULT 1.00,
     is_published BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (course_id) REFERENCES sprakapp_courses(id) ON DELETE CASCADE,
     INDEX idx_course (course_id),
+    INDEX idx_order (course_id, order_number),
     INDEX idx_published (is_published)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

@@ -1,6 +1,9 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../middleware/auth.php';
+require_once __DIR__ . '/../middleware/session-auth.php'; // TEMPORARILY DISABLED
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
@@ -11,30 +14,15 @@ switch ($method) {
         getVocabulary($db);
         break;
     case 'POST':
-        $decoded = Auth::verifyToken();
-        if ($decoded->role !== 'admin') {
-            http_response_code(403);
-            echo json_encode(['error' => 'Admin access required']);
-            return;
-        }
+        $decoded = SessionAuth::requireAdmin();
         createVocabulary($db);
         break;
     case 'PUT':
-        $decoded = Auth::verifyToken();
-        if ($decoded->role !== 'admin') {
-            http_response_code(403);
-            echo json_encode(['error' => 'Admin access required']);
-            return;
-        }
+        $decoded = SessionAuth::requireAdmin();
         updateVocabulary($db, $_GET['id']);
         break;
     case 'DELETE':
-        $decoded = Auth::verifyToken();
-        if ($decoded->role !== 'admin') {
-            http_response_code(403);
-            echo json_encode(['error' => 'Admin access required']);
-            return;
-        }
+        $decoded = SessionAuth::requireAdmin();
         deleteVocabulary($db, $_GET['id']);
         break;
     default:

@@ -1,6 +1,9 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../middleware/auth.php';
+require_once __DIR__ . '/../middleware/session-auth.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
@@ -10,6 +13,10 @@ switch ($method) {
     case 'GET':
         if (isset($_GET['id'])) {
             getCourse($db, $_GET['id']);
+        } elseif (isset($_GET['action']) && $_GET['action'] === 'admin') {
+            // Admin endpoint - get ALL courses
+            $user = SessionAuth::requireAdmin();
+            getAdminCourses($db);
         } else {
             getCourses($db);
         }
@@ -17,36 +24,21 @@ switch ($method) {
     case 'POST':
         // Check if this is an access check request
         if (isset($_GET['action']) && $_GET['action'] === 'access') {
-            $decoded = Auth::verifyToken();
-            checkCourseAccess($db, $decoded);
+            $user = SessionAuth::requireAuth();
+            checkCourseAccess($db, $user);
         } else {
             // Regular course creation - requires admin
-            $decoded = Auth::verifyToken();
-            if ($decoded->role !== 'admin') {
-                http_response_code(403);
-                echo json_encode(['error' => 'Admin access required']);
-                return;
-            }
-            createCourse($db);
+            $user = SessionAuth::requireAdmin();
+            createCourse($db, $user);
         }
         break;
     case 'PUT':
-        $decoded = Auth::verifyToken();
-        if ($decoded->role !== 'admin') {
-            http_response_code(403);
-            echo json_encode(['error' => 'Admin access required']);
-            return;
-        }
-        updateCourse($db, $_GET['id']);
+        $user = SessionAuth::requireAdmin();
+        updateCourse($db, $_GET['id'], $user);
         break;
     case 'DELETE':
-        $decoded = Auth::verifyToken();
-        if ($decoded->role !== 'admin') {
-            http_response_code(403);
-            echo json_encode(['error' => 'Admin access required']);
-            return;
-        }
-        deleteCourse($db, $_GET['id']);
+        $user = SessionAuth::requireAdmin();
+        deleteCourse($db, $_GET['id'], $user);
         break;
     default:
         http_response_code(405);
@@ -74,6 +66,25 @@ function getCourses($db) {
     }
 }
 
+function getAdminCourses($db) {
+    try {
+        $query = "SELECT c.*, 
+                  (SELECT COUNT(*) FROM sprakapp_chapters WHERE course_id = c.id) as chapter_count
+                  FROM sprakapp_courses c 
+                  ORDER BY c.created_at DESC";
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute();
+        
+        $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        sendSuccess($courses);
+        
+    } catch (Exception $e) {
+        sendError('Failed to fetch admin courses: ' . $e->getMessage(), 500);
+    }
+}
+
 function getCourse($db, $id) {
     try {
         $query = "SELECT c.*, 
@@ -92,7 +103,7 @@ function getCourse($db, $id) {
         }
         
         // Get chapters
-        $query = "SELECT * FROM sprakapp_chapters WHERE course_id = :course_id ORDER BY order_index ASC";
+        $query = "SELECT * FROM sprakapp_chapters WHERE course_id = :course_id ORDER BY order_number ASC";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':course_id', $id);
         $stmt->execute();
@@ -106,7 +117,7 @@ function getCourse($db, $id) {
     }
 }
 
-function createCourse($db) {
+function createCourse($db, $user) {
     $data = json_decode(file_get_contents("php://input"));
     
     if (!isset($data->title)) {
@@ -116,19 +127,28 @@ function createCourse($db) {
     try {
         $courseId = bin2hex(random_bytes(16));
         
-        $query = "INSERT INTO sprakapp_courses (id, title, description, level, language, is_published, order_index) 
-                  VALUES (:id, :title, :description, :level, :language, :is_published, :order_index)";
+        $query = "INSERT INTO sprakapp_courses (id, title, description, level, language, cover_image, is_published, order_index, created_by, speech_voice_name, audio_file_url) 
+                  VALUES (:id, :title, :description, :level, :language, :cover_image, :is_published, :order_index, :created_by, :speech_voice_name, :audio_file_url)";
         
         $stmt = $db->prepare($query);
         $stmt->bindParam(':id', $courseId);
         $stmt->bindParam(':title', $data->title);
-        $stmt->bindParam(':description', $data->description);
-        $stmt->bindParam(':level', $data->level);
+        $description = $data->description ?? null;
+        $stmt->bindParam(':description', $description);
+        $level = $data->level ?? null;
+        $stmt->bindParam(':level', $level);
         $stmt->bindParam(':language', $data->language);
+        $cover_image = $data->cover_image ?? null;
+        $stmt->bindParam(':cover_image', $cover_image);
         $is_published = isset($data->is_published) ? (int)$data->is_published : 0;
         $stmt->bindParam(':is_published', $is_published);
         $order_index = $data->order_index ?? 0;
         $stmt->bindParam(':order_index', $order_index);
+        $stmt->bindParam(':created_by', $user->id);
+        $speech_voice_name = $data->speech_voice_name ?? null;
+        $stmt->bindParam(':speech_voice_name', $speech_voice_name);
+        $audio_file_url = $data->audio_file_url ?? null;
+        $stmt->bindParam(':audio_file_url', $audio_file_url);
         $stmt->execute();
         
         sendSuccess(['id' => $courseId, 'message' => 'Course created'], 201);
@@ -138,7 +158,7 @@ function createCourse($db) {
     }
 }
 
-function updateCourse($db, $id) {
+function updateCourse($db, $id, $user) {
     $data = json_decode(file_get_contents("php://input"));
     
     try {
@@ -190,7 +210,7 @@ function updateCourse($db, $id) {
     }
 }
 
-function deleteCourse($db, $id) {
+function deleteCourse($db, $id, $user) {
     try {
         $query = "DELETE FROM sprakapp_courses WHERE id = :id";
         $stmt = $db->prepare($query);

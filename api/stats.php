@@ -1,11 +1,14 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../middleware/auth.php';
+require_once __DIR__ . '/../middleware/session-auth.php'; // TEMPORARILY DISABLED
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
 $db = $database->getConnection();
-$decoded = Auth::verifyToken();
+$decoded = SessionAuth::requireAuth();
 
 switch ($method) {
     case 'GET':
