@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS sprakapp_vocabulary (
 CREATE TABLE IF NOT EXISTS sprakapp_exercises (
     id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
     chapter_id VARCHAR(36) NOT NULL,
-    type ENUM('multiple_choice', 'fill_blank', 'translation', 'matching', 'listening') NOT NULL,
+    type ENUM('multiple_choice', 'fill_blank', 'translation', 'matching', 'listening', 'write') NOT NULL,
     question TEXT NOT NULL,
     correct_answer TEXT NOT NULL,
     options JSON,
