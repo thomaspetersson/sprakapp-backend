@@ -66,11 +66,11 @@ function getUserCourses($db) {
     }
     
     try {
-        $query = "SELECT uc.id, uc.user_id, uc.course_id, uc.start_date, uc.end_date, uc.chapter_limit, uc.assigned_at, c.title as course_title 
+        $query = "SELECT uc.id, uc.user_id, uc.course_id, uc.start_date, uc.end_date, uc.chapter_limit, uc.granted_at, c.title as course_title 
                   FROM sprakapp_user_course_access uc
                   LEFT JOIN sprakapp_courses c ON uc.course_id = c.id
                   WHERE uc.user_id = :user_id
-                  ORDER BY uc.assigned_at DESC";
+                  ORDER BY uc.granted_at DESC";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':user_id', $userId);
         $stmt->execute();
@@ -108,10 +108,20 @@ function assignCourseToUser($db) {
         $stmt = $db->prepare($query);
         $stmt->bindParam(':user_id', $data->user_id);
         $stmt->bindParam(':course_id', $data->course_id);
-        $start_date = $data->start_date ?? null;
+        
+        // Convert ISO datetime to DATE format (YYYY-MM-DD)
+        $start_date = null;
+        if (isset($data->start_date) && $data->start_date) {
+            $start_date = date('Y-m-d', strtotime($data->start_date));
+        }
         $stmt->bindParam(':start_date', $start_date);
-        $end_date = $data->end_date ?? null;
+        
+        $end_date = null;
+        if (isset($data->end_date) && $data->end_date) {
+            $end_date = date('Y-m-d', strtotime($data->end_date));
+        }
         $stmt->bindParam(':end_date', $end_date);
+        
         $chapter_limit = $data->chapter_limit ?? null;
         $stmt->bindParam(':chapter_limit', $chapter_limit, PDO::PARAM_INT);
         $stmt->execute();
@@ -160,11 +170,13 @@ function updateUserCourseDates($db) {
             
             if (isset($data->start_date)) {
                 $fields[] = "start_date = :start_date";
-                $params[':start_date'] = $data->start_date;
+                // Convert ISO datetime to DATE format
+                $params[':start_date'] = $data->start_date ? date('Y-m-d', strtotime($data->start_date)) : null;
             }
             if (isset($data->end_date)) {
                 $fields[] = "end_date = :end_date";
-                $params[':end_date'] = $data->end_date;
+                // Convert ISO datetime to DATE format
+                $params[':end_date'] = $data->end_date ? date('Y-m-d', strtotime($data->end_date)) : null;
             }
             if (isset($data->chapter_limit)) {
                 $fields[] = "chapter_limit = :chapter_limit";
