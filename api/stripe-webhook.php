@@ -4,8 +4,17 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/stripe-config.php';
 
+// Custom logging to file
+function logWebhook($message) {
+    $logFile = __DIR__ . '/webhook-debug.log';
+    $timestamp = date('Y-m-d H:i:s');
+    file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
+    error_log($message); // Also log to PHP error log
+}
+
 // Get database connection
-$db = getDBConnection();
+$database = new Database();
+$db = $database->getConnection();
 $stripeConfig = require __DIR__ . '/../config/stripe-config.php';
 
 // Helper function to verify Stripe webhook signature
@@ -41,6 +50,8 @@ function verifyStripeSignature($payload, $signature, $secret) {
 // Helper function to assign course access
 function assignCourseAccess($db, $userId, $courseId, $subscriptionId = null, $customerId = null) {
     try {
+        logWebhook("assignCourseAccess called: userId=$userId, courseId=$courseId, subscriptionId=$subscriptionId, customerId=$customerId");
+        
         // Calculate dates
         $grantedAt = date('Y-m-d H:i:s');
         $startDate = date('Y-m-d');
@@ -54,16 +65,19 @@ function assignCourseAccess($db, $userId, $courseId, $subscriptionId = null, $cu
         $stmt->execute([$userId, $courseId]);
         $existing = $stmt->fetch(PDO::FETCH_OBJ);
         
+        logWebhook("Existing assignment: " . ($existing ? "YES (id={$existing->id})" : "NO"));
+        
         if ($existing) {
-            // Update existing assignment
+            // Update existing assignment - remove chapter limit for paid access
             $stmt = $db->prepare("
                 UPDATE sprakapp_user_course_access 
                 SET start_date = ?, end_date = ?, granted_at = ?,
                     stripe_subscription_id = ?, stripe_customer_id = ?,
-                    subscription_status = 'active'
+                    subscription_status = 'active', chapter_limit = NULL
                 WHERE user_id = ? AND course_id = ?
             ");
-            $stmt->execute([$startDate, $endDate, $grantedAt, $subscriptionId, $customerId, $userId, $courseId]);
+            $result = $stmt->execute([$startDate, $endDate, $grantedAt, $subscriptionId, $customerId, $userId, $courseId]);
+            logWebhook("UPDATE result: " . ($result ? "SUCCESS" : "FAILED"));
         } else {
             // Create new assignment
             $stmt = $db->prepare("
@@ -71,12 +85,14 @@ function assignCourseAccess($db, $userId, $courseId, $subscriptionId = null, $cu
                 (user_id, course_id, granted_at, start_date, end_date, stripe_subscription_id, stripe_customer_id, subscription_status) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
             ");
-            $stmt->execute([$userId, $courseId, $grantedAt, $startDate, $endDate, $subscriptionId, $customerId]);
+            $result = $stmt->execute([$userId, $courseId, $grantedAt, $startDate, $endDate, $subscriptionId, $customerId]);
+            logWebhook("INSERT result: " . ($result ? "SUCCESS" : "FAILED"));
         }
         
         return true;
     } catch (Exception $e) {
-        error_log('Failed to assign course access: ' . $e->getMessage());
+        logWebhook('Failed to assign course access: ' . $e->getMessage());
+        logWebhook('Stack trace: ' . $e->getTraceAsString());
         return false;
     }
 }

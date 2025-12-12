@@ -153,8 +153,8 @@ function createCourse($db, $user) {
     try {
         $courseId = bin2hex(random_bytes(16));
         
-        $query = "INSERT INTO sprakapp_courses (id, title, description, level, language, cover_image, is_published, order_index, created_by, speech_voice_name, audio_file_url) 
-                  VALUES (:id, :title, :description, :level, :language, :cover_image, :is_published, :order_index, :created_by, :speech_voice_name, :audio_file_url)";
+        $query = "INSERT INTO sprakapp_courses (id, title, description, level, language, cover_image, is_published, order_index, created_by, speech_voice_name, audio_file_url, price_monthly, currency) 
+                  VALUES (:id, :title, :description, :level, :language, :cover_image, :is_published, :order_index, :created_by, :speech_voice_name, :audio_file_url, :price_monthly, :currency)";
         
         $stmt = $db->prepare($query);
         $stmt->bindParam(':id', $courseId);
@@ -175,6 +175,10 @@ function createCourse($db, $user) {
         $stmt->bindParam(':speech_voice_name', $speech_voice_name);
         $audio_file_url = $data->audio_file_url ?? null;
         $stmt->bindParam(':audio_file_url', $audio_file_url);
+        $price_monthly = $data->price_monthly ?? 99.00;
+        $stmt->bindParam(':price_monthly', $price_monthly);
+        $currency = $data->currency ?? 'SEK';
+        $stmt->bindParam(':currency', $currency);
         $stmt->execute();
         
         sendSuccess(['id' => $courseId, 'message' => 'Course created'], 201);
@@ -207,6 +211,10 @@ function updateCourse($db, $id, $user) {
             $fields[] = "language = :language";
             $params[':language'] = $data->language;
         }
+        if (isset($data->cover_image)) {
+            $fields[] = "cover_image = :cover_image";
+            $params[':cover_image'] = $data->cover_image;
+        }
         if (isset($data->is_published)) {
             $fields[] = "is_published = :is_published";
             $params[':is_published'] = (int)$data->is_published;
@@ -214,6 +222,14 @@ function updateCourse($db, $id, $user) {
         if (isset($data->order_index)) {
             $fields[] = "order_index = :order_index";
             $params[':order_index'] = $data->order_index;
+        }
+        if (isset($data->price_monthly)) {
+            $fields[] = "price_monthly = :price_monthly";
+            $params[':price_monthly'] = $data->price_monthly;
+        }
+        if (isset($data->currency)) {
+            $fields[] = "currency = :currency";
+            $params[':currency'] = $data->currency;
         }
         
         if (empty($fields)) {

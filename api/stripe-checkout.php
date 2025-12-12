@@ -13,13 +13,12 @@ require_once __DIR__ . '/../middleware/session-auth.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/stripe-config.php';
 
-use Middleware\SessionAuth;
-
 // Require authenticated user
 $user = SessionAuth::requireAuth();
 
 // Get database connection
-$db = getDBConnection();
+$database = new Database();
+$db = $database->getConnection();
 
 // Stripe helper function using cURL (no SDK needed)
 function createStripeCheckoutSession($courseId, $courseName, $priceMonthly, $currency, $userId, $userEmail) {
@@ -51,14 +50,31 @@ function createStripeCheckoutSession($courseId, $courseName, $priceMonthly, $cur
             'user_id' => $userId,
         ],
         'customer_email' => $userEmail,
-        'success_url' => getenv('FRONTEND_URL') . '/courses?payment=success&session_id={CHECKOUT_SESSION_ID}',
-        'cancel_url' => getenv('FRONTEND_URL') . '/courses?payment=cancelled',
+        'success_url' => 'https://d90.se/sprakapp/courses?payment=success&session_id={CHECKOUT_SESSION_ID}',
+        'cancel_url' => 'https://d90.se/sprakapp/courses?payment=cancelled',
     ];
+    
+    // Flatten nested arrays for http_build_query
+    $postData = http_build_query([
+        'payment_method_types[0]' => 'card',
+        'mode' => 'subscription',
+        'line_items[0][price_data][currency]' => strtolower($currency),
+        'line_items[0][price_data][product_data][name]' => $courseName,
+        'line_items[0][price_data][product_data][description]' => 'Monthly subscription to ' . $courseName,
+        'line_items[0][price_data][recurring][interval]' => 'month',
+        'line_items[0][price_data][unit_amount]' => $priceInCents,
+        'line_items[0][quantity]' => 1,
+        'metadata[course_id]' => $courseId,
+        'metadata[user_id]' => $userId,
+        'customer_email' => $userEmail,
+        'success_url' => 'https://d90.se/sprakapp/courses?payment=success&session_id={CHECKOUT_SESSION_ID}',
+        'cancel_url' => 'https://d90.se/sprakapp/courses?payment=cancelled',
+    ]);
     
     $ch = curl_init('https://api.stripe.com/v1/checkout/sessions');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Authorization: Bearer ' . $stripeConfig['secret_key'],
         'Content-Type: application/x-www-form-urlencoded',
@@ -66,11 +82,15 @@ function createStripeCheckoutSession($courseId, $courseName, $priceMonthly, $cur
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
     curl_close($ch);
     
     if ($httpCode !== 200) {
-        error_log('Stripe API error: ' . $response);
-        throw new Exception('Failed to create checkout session');
+        error_log('Stripe API error (HTTP ' . $httpCode . '): ' . $response);
+        if ($curlError) {
+            error_log('cURL error: ' . $curlError);
+        }
+        throw new Exception('Failed to create checkout session: ' . $response);
     }
     
     return json_decode($response, true);
