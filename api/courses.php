@@ -17,6 +17,10 @@ switch ($method) {
             // Admin endpoint - get ALL courses
             $user = SessionAuth::requireAdmin();
             getAdminCourses($db);
+        } elseif (isset($_GET['action']) && $_GET['action'] === 'user-courses') {
+            // User endpoint - get assigned courses for current user
+            $user = SessionAuth::requireAuth();
+            getUserAssignedCourses($db, $user);
         } else {
             getCourses($db);
         }
@@ -82,6 +86,28 @@ function getAdminCourses($db) {
         
     } catch (Exception $e) {
         sendError('Failed to fetch admin courses: ' . $e->getMessage(), 500);
+    }
+}
+
+function getUserAssignedCourses($db, $user) {
+    try {
+        $userId = $user->user_id;
+        
+        $query = "SELECT uc.id, uc.user_id, uc.course_id, uc.start_date, uc.end_date, uc.chapter_limit, uc.granted_at, c.title as course_title 
+                  FROM sprakapp_user_course_access uc
+                  LEFT JOIN sprakapp_courses c ON uc.course_id = c.id
+                  WHERE uc.user_id = :user_id
+                  ORDER BY uc.granted_at DESC";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':user_id', $userId);
+        $stmt->execute();
+        
+        $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        sendSuccess($courses);
+        
+    } catch (Exception $e) {
+        sendError('Failed to fetch user courses: ' . $e->getMessage(), 500);
     }
 }
 
@@ -240,7 +266,7 @@ function checkCourseAccess($db, $decoded) {
 
         // Check if user has an assignment for this course
         $query = "SELECT id, start_date, end_date, chapter_limit 
-                  FROM sprakapp_user_courses 
+                  FROM sprakapp_user_course_access 
                   WHERE user_id = :user_id AND course_id = :course_id";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':user_id', $userId);

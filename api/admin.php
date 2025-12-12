@@ -99,34 +99,49 @@ function assignCourseToUser($db) {
         $stmt->bindParam(':course_id', $data->course_id);
         $stmt->execute();
         
-        if ($stmt->rowCount() > 0) {
-            sendError('Course already assigned to user', 409);
-        }
-        
-        $query = "INSERT INTO sprakapp_user_course_access (user_id, course_id, start_date, end_date, chapter_limit) 
-                  VALUES (:user_id, :course_id, :start_date, :end_date, :chapter_limit)";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':user_id', $data->user_id);
-        $stmt->bindParam(':course_id', $data->course_id);
+        $exists = $stmt->fetch(PDO::FETCH_ASSOC);
         
         // Convert ISO datetime to DATE format (YYYY-MM-DD)
         $start_date = null;
         if (isset($data->start_date) && $data->start_date) {
             $start_date = date('Y-m-d', strtotime($data->start_date));
         }
-        $stmt->bindParam(':start_date', $start_date);
         
         $end_date = null;
         if (isset($data->end_date) && $data->end_date) {
             $end_date = date('Y-m-d', strtotime($data->end_date));
         }
-        $stmt->bindParam(':end_date', $end_date);
         
         $chapter_limit = $data->chapter_limit ?? null;
-        $stmt->bindParam(':chapter_limit', $chapter_limit, PDO::PARAM_INT);
-        $stmt->execute();
         
-        sendSuccess(['message' => 'Course assigned to user'], 201);
+        if ($exists) {
+            // Update existing assignment
+            $query = "UPDATE sprakapp_user_course_access 
+                      SET start_date = :start_date, end_date = :end_date, chapter_limit = :chapter_limit
+                      WHERE user_id = :user_id AND course_id = :course_id";
+            $stmt = $db->prepare($query);
+            $stmt->bindParam(':user_id', $data->user_id);
+            $stmt->bindParam(':course_id', $data->course_id);
+            $stmt->bindParam(':start_date', $start_date);
+            $stmt->bindParam(':end_date', $end_date);
+            $stmt->bindParam(':chapter_limit', $chapter_limit, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            sendSuccess(['message' => 'Course assignment updated'], 200);
+        } else {
+            // Insert new assignment
+            $query = "INSERT INTO sprakapp_user_course_access (user_id, course_id, start_date, end_date, chapter_limit) 
+                      VALUES (:user_id, :course_id, :start_date, :end_date, :chapter_limit)";
+            $stmt = $db->prepare($query);
+            $stmt->bindParam(':user_id', $data->user_id);
+            $stmt->bindParam(':course_id', $data->course_id);
+            $stmt->bindParam(':start_date', $start_date);
+            $stmt->bindParam(':end_date', $end_date);
+            $stmt->bindParam(':chapter_limit', $chapter_limit, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            sendSuccess(['message' => 'Course assigned to user'], 201);
+        }
         
     } catch (Exception $e) {
         sendError('Failed to assign course: ' . $e->getMessage(), 500);
