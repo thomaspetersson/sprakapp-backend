@@ -16,6 +16,13 @@ require_once __DIR__ . '/../config/stripe-config.php';
 // Require authenticated user
 $user = SessionAuth::requireAuth();
 
+// Ensure user has user_id property
+if (!isset($user->user_id)) {
+    http_response_code(401);
+    echo json_encode(['error' => 'User ID not found in session']);
+    exit();
+}
+
 // Get database connection
 $database = new Database();
 $db = $database->getConnection();
@@ -69,7 +76,7 @@ try {
             ORDER BY uca.subscription_status = 'active' DESC, uca.start_date DESC
         ");
         
-        $stmt->execute([$user->id]);
+        $stmt->execute([$user->user_id]);
         $subscriptions = $stmt->fetchAll(PDO::FETCH_OBJ);
         
         http_response_code(200);
@@ -95,7 +102,7 @@ try {
             FROM sprakapp_user_course_access 
             WHERE user_id = ? AND stripe_subscription_id = ?
         ");
-        $stmt->execute([$user->id, $subscriptionId]);
+        $stmt->execute([$user->user_id, $subscriptionId]);
         $access = $stmt->fetch(PDO::FETCH_OBJ);
         
         if (!$access) {
