@@ -3,7 +3,12 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../middleware/session-auth.php'; // TEMPORARILY DISABLED
+require_once __DIR__ . '/../middleware/session-auth.php';
+require_once __DIR__ . '/../middleware/access-control.php';
+require_once __DIR__ . '/../middleware/rate-limit.php';
+
+// Rate limit API requests
+RateLimit::check(RateLimit::getIdentifier(), 'api');
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
@@ -36,9 +41,41 @@ function getExercises($db) {
     
     if (!$chapterId) {
         sendError('chapter_id required', 400);
+        return;
     }
     
     try {
+        // Get user
+        $user = SessionAuth::getUser();
+        $userId = $user ? $user->user_id : null;
+        
+        // Check access to chapter before returning exercises
+        if ($userId) {
+            try {
+                AccessControl::checkChapterAccess($db, $userId, $chapterId);
+            } catch (Exception $e) {
+                sendError($e->getMessage(), 403);
+                return;
+            }
+        } else {
+            // For unauthenticated users, get chapter's course and check if free
+            $stmt = $db->prepare("SELECT course_id FROM sprakapp_chapters WHERE id = ?");
+            $stmt->execute([$chapterId]);
+            $chapter = $stmt->fetch(PDO::FETCH_OBJ);
+            
+            if (!$chapter) {
+                sendError('Chapter not found', 404);
+                return;
+            }
+            
+            try {
+                AccessControl::checkCourseAccess($db, null, $chapter->course_id);
+            } catch (Exception $e) {
+                sendError('Authentication required to access this content', 401);
+                return;
+            }
+        }
+        
         $query = "SELECT * FROM sprakapp_exercises WHERE chapter_id = :chapter_id ORDER BY order_index ASC";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':chapter_id', $chapterId);

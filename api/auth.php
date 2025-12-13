@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../middleware/auth.php';
+require_once __DIR__ . '/../middleware/rate-limit.php';
+require_once __DIR__ . '/../middleware/csrf-protection.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
@@ -31,6 +33,9 @@ switch ($method) {
 }
 
 function register($db) {
+    // Rate limit registration attempts
+    RateLimit::check(RateLimit::getIdentifier(), 'default');
+    
     $data = json_decode(file_get_contents("php://input"));
     
     if (!isset($data->email) || !isset($data->password)) {
@@ -89,6 +94,9 @@ function register($db) {
 }
 
 function login($db) {
+    // Rate limit login attempts
+    RateLimit::check(RateLimit::getIdentifier(), 'login');
+    
     $data = json_decode(file_get_contents("php://input"));
     
     if (!isset($data->email) || !isset($data->password)) {

@@ -3,7 +3,12 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../middleware/session-auth.php'; // TEMPORARILY DISABLED
+require_once __DIR__ . '/../middleware/session-auth.php';
+require_once __DIR__ . '/../middleware/access-control.php';
+require_once __DIR__ . '/../middleware/rate-limit.php';
+
+// Rate limit API requests
+RateLimit::check(RateLimit::getIdentifier(), 'api');
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
@@ -38,18 +43,36 @@ switch ($method) {
 function getChapters($db) {
     $courseId = $_GET['course_id'] ?? null;
     
+    if (!$courseId) {
+        sendError('course_id parameter is required', 400);
+        return;
+    }
+    
     try {
-        if ($courseId) {
-            $query = "SELECT * FROM sprakapp_chapters WHERE course_id = :course_id ORDER BY order_number ASC";
-            $stmt = $db->prepare($query);
-            $stmt->bindParam(':course_id', $courseId);
-        } else {
-            $query = "SELECT * FROM sprakapp_chapters ORDER BY order_number ASC";
-            $stmt = $db->prepare($query);
-        }
+        // Get user (allow unauthenticated for public courses)
+        $user = SessionAuth::getUser();
+        $userId = $user ? $user->user_id : null;
         
+        // Fetch all chapters for the course
+        $query = "SELECT * FROM sprakapp_chapters WHERE course_id = :course_id ORDER BY order_number ASC";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':course_id', $courseId);
         $stmt->execute();
         $chapters = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // If user is authenticated, filter chapters based on access
+        if ($userId) {
+            $chapters = AccessControl::filterChaptersByAccess($db, $userId, $chapters, $courseId);
+        } else {
+            // For unauthenticated users, check if course is free
+            try {
+                AccessControl::checkCourseAccess($db, null, $courseId);
+                // Course is free, return all chapters
+            } catch (Exception $e) {
+                // Course requires payment, return empty array
+                $chapters = [];
+            }
+        }
         
         sendSuccess($chapters);
         
@@ -60,6 +83,11 @@ function getChapters($db) {
 
 function getChapter($db, $id) {
     try {
+        // Get user (required for single chapter access)
+        $user = SessionAuth::getUser();
+        $userId = $user ? $user->user_id : null;
+        
+        // Get chapter
         $query = "SELECT * FROM sprakapp_chapters WHERE id = :id";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':id', $id);
@@ -69,6 +97,25 @@ function getChapter($db, $id) {
         
         if (!$chapter) {
             sendError('Chapter not found', 404);
+            return;
+        }
+        
+        // Check access to this specific chapter
+        if ($userId) {
+            try {
+                AccessControl::checkChapterAccess($db, $userId, $id);
+            } catch (Exception $e) {
+                sendError($e->getMessage(), 403);
+                return;
+            }
+        } else {
+            // Unauthenticated user - check if course is free
+            try {
+                AccessControl::checkCourseAccess($db, null, $chapter['course_id']);
+            } catch (Exception $e) {
+                sendError('Authentication required to access this chapter', 401);
+                return;
+            }
         }
         
         // Get vocabulary

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../middleware/rate-limit.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
@@ -22,6 +23,9 @@ switch ($method) {
 }
 
 function requestPasswordReset($db) {
+    // Rate limit password reset requests
+    RateLimit::check(RateLimit::getIdentifier(), 'password-reset');
+    
     $data = json_decode(file_get_contents("php://input"));
     
     if (!isset($data->email)) {
