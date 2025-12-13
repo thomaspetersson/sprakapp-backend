@@ -5,10 +5,6 @@ ini_set('display_errors', 1);
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../middleware/session-auth.php';
 require_once __DIR__ . '/../middleware/access-control.php';
-require_once __DIR__ . '/../middleware/rate-limit.php';
-
-// Rate limit API requests
-RateLimit::check(RateLimit::getIdentifier(), 'api');
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
