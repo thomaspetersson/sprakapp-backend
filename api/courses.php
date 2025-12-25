@@ -1,6 +1,7 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0); // Don't output errors to break JSON
+ini_set('log_errors', 1); // Log errors instead
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../middleware/session-auth.php';
@@ -17,6 +18,16 @@ switch ($method) {
             // Admin endpoint - get ALL courses
             $user = SessionAuth::requireAdmin();
             getAdminCourses($db);
+        } elseif (isset($_GET['action']) && $_GET['action'] === 'editor') {
+            // Editor endpoint - get published and preview courses
+            $user = SessionAuth::requireAuth();
+            // Check if user is editor or admin
+            if ($user->role !== 'editor' && $user->role !== 'admin') {
+                http_response_code(403);
+                echo json_encode(['error' => 'Access denied. Editor or admin role required.']);
+                exit;
+            }
+            getEditorCourses($db);
         } elseif (isset($_GET['action']) && $_GET['action'] === 'user-courses') {
             // User endpoint - get assigned courses for current user
             $user = SessionAuth::requireAuth();
@@ -55,7 +66,7 @@ function getCourses($db) {
         $query = "SELECT c.*, 
                   (SELECT COUNT(*) FROM sprakapp_chapters WHERE course_id = c.id) as chapter_count
                   FROM sprakapp_courses c 
-                  WHERE c.is_published = 1 
+                  WHERE c.status = 'published'
                   ORDER BY c.order_index ASC, c.created_at DESC";
         
         $stmt = $db->prepare($query);
@@ -89,13 +100,36 @@ function getAdminCourses($db) {
     }
 }
 
+// New function to get courses including preview for editors
+function getEditorCourses($db) {
+    try {
+        $query = "SELECT c.*, 
+                  (SELECT COUNT(*) FROM sprakapp_chapters WHERE course_id = c.id) as chapter_count
+                  FROM sprakapp_courses c 
+                  WHERE c.status IN ('preview', 'published')
+                  ORDER BY c.order_index ASC, c.created_at DESC";
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute();
+        
+        $courses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        sendSuccess($courses);
+        
+    } catch (Exception $e) {
+        sendError('Failed to fetch editor courses: ' . $e->getMessage(), 500);
+    }
+}
+
 function getUserAssignedCourses($db, $user) {
     try {
         $userId = $user->user_id;
         
-        $query = "SELECT uc.id, uc.user_id, uc.course_id, uc.start_date, uc.end_date, uc.chapter_limit, uc.granted_at, c.title as course_title 
+        // Get all courses the user has access to
+        $query = "SELECT c.*, uc.start_date, uc.end_date, uc.chapter_limit, uc.granted_at,
+                  (SELECT COUNT(*) FROM sprakapp_chapters WHERE course_id = c.id) as chapter_count
                   FROM sprakapp_user_course_access uc
-                  LEFT JOIN sprakapp_courses c ON uc.course_id = c.id
+                  INNER JOIN sprakapp_courses c ON uc.course_id = c.id
                   WHERE uc.user_id = :user_id
                   ORDER BY uc.granted_at DESC";
         $stmt = $db->prepare($query);
@@ -153,8 +187,8 @@ function createCourse($db, $user) {
     try {
         $courseId = bin2hex(random_bytes(16));
         
-        $query = "INSERT INTO sprakapp_courses (id, title, description, level, language, cover_image, is_published, order_index, created_by, speech_voice_name, audio_file_url, price_monthly, currency) 
-                  VALUES (:id, :title, :description, :level, :language, :cover_image, :is_published, :order_index, :created_by, :speech_voice_name, :audio_file_url, :price_monthly, :currency)";
+        $query = "INSERT INTO sprakapp_courses (id, title, description, level, language, cover_image, status, order_index, created_by, speech_voice_name, audio_file_url, price_monthly, currency) 
+                  VALUES (:id, :title, :description, :level, :language, :cover_image, :status, :order_index, :created_by, :speech_voice_name, :audio_file_url, :price_monthly, :currency)";
         
         $stmt = $db->prepare($query);
         $stmt->bindParam(':id', $courseId);
@@ -166,8 +200,11 @@ function createCourse($db, $user) {
         $stmt->bindParam(':language', $data->language);
         $cover_image = $data->cover_image ?? null;
         $stmt->bindParam(':cover_image', $cover_image);
-        $is_published = isset($data->is_published) ? (int)$data->is_published : 0;
-        $stmt->bindParam(':is_published', $is_published);
+        
+        // Handle status field
+        $status = $data->status ?? 'draft';
+        $stmt->bindParam(':status', $status);
+        
         $order_index = $data->order_index ?? 0;
         $stmt->bindParam(':order_index', $order_index);
         $stmt->bindParam(':created_by', $user->id);
@@ -215,10 +252,13 @@ function updateCourse($db, $id, $user) {
             $fields[] = "cover_image = :cover_image";
             $params[':cover_image'] = $data->cover_image;
         }
-        if (isset($data->is_published)) {
-            $fields[] = "is_published = :is_published";
-            $params[':is_published'] = (int)$data->is_published;
+        
+        // Handle status field
+        if (isset($data->status)) {
+            $fields[] = "status = :status";
+            $params[':status'] = $data->status;
         }
+        
         if (isset($data->order_index)) {
             $fields[] = "order_index = :order_index";
             $params[':order_index'] = $data->order_index;
@@ -274,8 +314,8 @@ function checkCourseAccess($db, $decoded) {
         $isAdmin = $input['isAdmin'] ?? false;
         $chapterId = $input['chapterId'] ?? null;
 
-        // If user is admin, always grant access
-        if ($isAdmin || $decoded->role === 'admin') {
+        // If user is admin or editor, always grant access
+        if ($isAdmin || $decoded->role === 'admin' || $decoded->role === 'editor') {
             sendSuccess(true);
             return;
         }

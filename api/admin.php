@@ -33,6 +33,8 @@ switch ($method) {
     case 'PUT':
         if (isset($_GET['action']) && $_GET['action'] === 'dates') {
             updateUserCourseDates($db);
+        } elseif (isset($_GET['action']) && $_GET['action'] === 'role') {
+            updateUserRole($db);
         }
         break;
     default:
@@ -265,5 +267,36 @@ function updateUserCourseDates($db) {
         }
     } else {
         sendError('userCourseId or (user_id and course_id) required', 400);
+    }
+}
+
+function updateUserRole($db) {
+    $data = json_decode(file_get_contents("php://input"));
+    
+    if (!isset($data->user_id) || !isset($data->role)) {
+        sendError('user_id and role required', 400);
+    }
+    
+    // Validate role
+    $validRoles = ['user', 'editor', 'admin'];
+    if (!in_array($data->role, $validRoles)) {
+        sendError('Invalid role. Must be one of: user, editor, admin', 400);
+    }
+    
+    try {
+        $query = "UPDATE sprakapp_profiles SET role = :role WHERE id = :user_id";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':role', $data->role);
+        $stmt->bindParam(':user_id', $data->user_id);
+        $stmt->execute();
+        
+        if ($stmt->rowCount() === 0) {
+            sendError('User not found or role unchanged', 404);
+        }
+        
+        sendSuccess(['message' => 'User role updated successfully']);
+        
+    } catch (Exception $e) {
+        sendError('Failed to update user role: ' . $e->getMessage(), 500);
     }
 }

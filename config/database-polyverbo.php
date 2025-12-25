@@ -3,7 +3,7 @@ class Database {
     private $host = 'localhost';
     private $db_name = 'polyverb_sprakapp';
     private $username = 'polyverb';
-    private $password = 'DIT_DATABAS_LÖSENORD_HÄR'; // ÄNDRA DETTA!
+    private $password = 'Knutte4711'; // ÄNDRA DETTA!
     private $port = '3306';
     public $conn;
 
