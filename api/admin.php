@@ -44,7 +44,8 @@ switch ($method) {
 
 function getAllProfiles($db) {
     try {
-        $query = "SELECT p.id, p.first_name, p.last_name, p.avatar_url, p.role, u.email, p.created_at 
+        $query = "SELECT p.id, p.first_name, p.last_name, p.avatar_url, p.role, u.email, p.created_at,
+                  (SELECT COUNT(*) FROM sprakapp_user_course_access uc WHERE uc.user_id = p.id AND uc.subscription_status = 'active') as active_subscriptions
                   FROM sprakapp_profiles p
                   LEFT JOIN sprakapp_users u ON p.id = u.id
                   ORDER BY p.created_at DESC";
@@ -68,7 +69,7 @@ function getUserCourses($db) {
     }
     
     try {
-        $query = "SELECT uc.id, uc.user_id, uc.course_id, uc.start_date, uc.end_date, uc.chapter_limit, uc.granted_at, c.title as course_title 
+        $query = "SELECT uc.id, uc.user_id, uc.course_id, uc.start_date, uc.end_date, uc.chapter_limit, uc.granted_at, c.title as course_title, uc.subscription_status, uc.stripe_subscription_id 
                   FROM sprakapp_user_course_access uc
                   LEFT JOIN sprakapp_courses c ON uc.course_id = c.id
                   WHERE uc.user_id = :user_id
