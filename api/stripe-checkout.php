@@ -50,8 +50,8 @@ function createStripeCheckoutSession($courseId, $courseName, $priceMonthly, $cur
             'user_id' => $userId,
         ],
         'customer_email' => $userEmail,
-        'success_url' => 'https://d90.se/sprakapp/courses?payment=success&session_id={CHECKOUT_SESSION_ID}',
-        'cancel_url' => 'https://d90.se/sprakapp/courses?payment=cancelled',
+        'success_url' => 'https://polyverbo.com/courses?payment=success&session_id={CHECKOUT_SESSION_ID}',
+        'cancel_url' => 'https://polyverbo.com/courses?payment=cancelled',
     ];
     
     // Flatten nested arrays for http_build_query
@@ -67,8 +67,8 @@ function createStripeCheckoutSession($courseId, $courseName, $priceMonthly, $cur
         'metadata[course_id]' => $courseId,
         'metadata[user_id]' => $userId,
         'customer_email' => $userEmail,
-        'success_url' => 'https://d90.se/sprakapp/courses?payment=success&session_id={CHECKOUT_SESSION_ID}',
-        'cancel_url' => 'https://d90.se/sprakapp/courses?payment=cancelled',
+        'success_url' => 'https://polyverbo.com/courses?payment=success&session_id={CHECKOUT_SESSION_ID}',
+        'cancel_url' => 'https://polyverbo.com/courses?payment=cancelled',
     ]);
     
     $ch = curl_init('https://api.stripe.com/v1/checkout/sessions');
