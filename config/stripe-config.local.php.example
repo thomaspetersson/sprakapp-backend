@@ -1,0 +1,10 @@
+<?php
+// Local Stripe configuration - ADD YOUR REAL KEYS HERE
+// This file should NOT be committed to git
+
+return [
+    'secret_key' => 'sk_test_YOUR_ACTUAL_SECRET_KEY_HERE',
+    'publishable_key' => 'pk_test_YOUR_ACTUAL_PUBLISHABLE_KEY_HERE',
+    'webhook_secret' => 'whsec_YOUR_ACTUAL_WEBHOOK_SECRET_HERE',
+    'api_version' => '2023-10-16',
+];

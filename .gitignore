@@ -1,0 +1,12 @@
+# Ignore local configuration files with sensitive data
+config/stripe-config.local.php
+config/database.local.php
+.env
+.env.local
+
+# Ignore test files
+api/test-*.php
+
+# Ignore logs
+*.log
+error_log

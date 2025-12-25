@@ -1,7 +1,15 @@
 <?php
 // Stripe configuration
-// For production, use environment variables or a secure config file
+// For production, create stripe-config.local.php with your actual keys (will be gitignored)
+// Or use environment variables
 
+// Check for local config first (not committed to git)
+$localConfig = __DIR__ . '/stripe-config.local.php';
+if (file_exists($localConfig)) {
+    return require $localConfig;
+}
+
+// Fallback to environment variables or defaults
 return [
     'secret_key' => getenv('STRIPE_SECRET_KEY') ?: 'sk_test_YOUR_SECRET_KEY',
     'publishable_key' => getenv('STRIPE_PUBLISHABLE_KEY') ?: 'pk_test_YOUR_PUBLISHABLE_KEY',
