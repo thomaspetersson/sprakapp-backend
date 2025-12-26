@@ -1,3 +1,5 @@
+// Testloggning: skriv till loggfil direkt vid start
+file_put_contents(dirname(__FILE__) . '/stripe-debug.log', date('c') . " STRIPE-CHECKOUT.PHP KÖRS\n", FILE_APPEND);
 <?php
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -23,7 +25,9 @@ $db = $database->getConnection();
 // Stripe helper function using cURL (no SDK needed)
 function createStripeCheckoutSession($courseId, $courseName, $priceMonthly, $currency, $userId, $userEmail) {
     $stripeConfig = require __DIR__ . '/../config/stripe-config.php';
-    
+    // LOGGA vilken nyckel som används
+    file_put_contents(dirname(__FILE__) . '/stripe-debug.log', date('c') . ' SECRET_KEY: ' . $stripeConfig['secret_key'] . "\n", FILE_APPEND);
+
     // Convert price to cents (Stripe expects smallest currency unit)
     $priceInCents = (int)($priceMonthly * 100);
     
@@ -84,7 +88,8 @@ function createStripeCheckoutSession($courseId, $courseName, $priceMonthly, $cur
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
     curl_close($ch);
-    
+    // LOGGA hela svaret från Stripe
+    file_put_contents(dirname(__FILE__) . '/stripe-debug.log', date('c') . " STRIPE_RESP ($httpCode): $response\n", FILE_APPEND);
     if ($httpCode !== 200) {
         error_log('Stripe API error (HTTP ' . $httpCode . '): ' . $response);
         if ($curlError) {
@@ -92,7 +97,6 @@ function createStripeCheckoutSession($courseId, $courseName, $priceMonthly, $cur
         }
         throw new Exception('Failed to create checkout session: ' . $response);
     }
-    
     return json_decode($response, true);
 }
 

@@ -3,8 +3,8 @@
 // For production, create stripe-config.local.php with your actual keys (will be gitignored)
 // Or use environment variables
 
-// Check for local config first (not committed to git)
-$localConfig = __DIR__ . '/stripe-config.local.php';
+// Check for local config in public_html/config (not committed to git)
+$localConfig = dirname(__DIR__, 2) . '/config/stripe-config.local.php';
 if (file_exists($localConfig)) {
     return require $localConfig;
 }

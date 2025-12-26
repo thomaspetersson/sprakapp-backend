@@ -1,238 +1,316 @@
-[21-Dec-2025 18:09:45 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:09:45 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
+[25-Dec-2025 18:37:21 Europe/Stockholm] PHP Warning:  require(/home/polyverb/config/stripe-config.php): Failed to open stream: No such file or directory in /home/polyverb/public_html/api/user-subscriptions.php on line 62
+[25-Dec-2025 18:37:21 Europe/Stockholm] PHP Warning:  require(/home/polyverb/config/stripe-config.php): Failed to open stream: No such file or directory in /home/polyverb/public_html/api/user-subscriptions.php on line 62
+[25-Dec-2025 18:37:21 Europe/Stockholm] PHP Fatal error:  Uncaught Error: Failed opening required '/home/polyverb/config/stripe-config.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/polyverb/public_html/api/user-subscriptions.php:62
 Stack trace:
-#0 /home/polyverb/public_html/api/auth-session.php(9): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:09:45 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:09:45 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
+#0 {main}
+  thrown in /home/polyverb/public_html/api/user-subscriptions.php on line 62
+[25-Dec-2025 18:47:53 Europe/Stockholm] Payment success handler error: Failed to retrieve checkout session
+[25-Dec-2025 19:01:35 Europe/Stockholm] Payment success handler error: Missing course or user information
+[25-Dec-2025 20:06:45 Europe/Stockholm] Stripe API error (HTTP 401): {
+  "error": {
+    "message": "Invalid API Key provided: sk_test_***********_KEY",
+    "type": "invalid_request_error"
+  }
+}
+
+[26-Dec-2025 13:20:08 Europe/Stockholm] Stripe API error (HTTP 401): {
+  "error": {
+    "message": "Invalid API Key provided: sk_test_***********_KEY",
+    "type": "invalid_request_error"
+  }
+}
+
+[26-Dec-2025 13:23:57 Europe/Stockholm] Stripe API error (HTTP 404): {
+  "error": {
+    "code": "resource_missing",
+    "doc_url": "https://stripe.com/docs/error-codes/resource-missing",
+    "message": "No such subscription: 'sub_1SiJj9QcNsDr739C3AMp538L'",
+    "param": "id",
+    "request_log_url": "https://dashboard.stripe.com/test/logs/req_nFh41jZGkm2cu1?t=1766751837",
+    "type": "invalid_request_error"
+  }
+}
+
+[26-Dec-2025 13:26:02 Europe/Stockholm] PHP Fatal error:  Cannot use try without catch or finally in /home/polyverb/public_html/api/subscriptions.php on line 135
+[26-Dec-2025 13:44:28 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "active", expecting ")" in /home/polyverb/public_html/api/subscriptions.php on line 73
+[26-Dec-2025 13:44:55 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "active", expecting ")" in /home/polyverb/public_html/api/subscriptions.php on line 73
+[26-Dec-2025 13:45:59 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "active", expecting ")" in /home/polyverb/public_html/api/subscriptions.php on line 73
+[26-Dec-2025 13:47:11 Europe/Stockholm] PHP Fatal error:  Cannot use try without catch or finally in /home/polyverb/public_html/api/subscriptions.php on line 150
+[26-Dec-2025 13:47:17 Europe/Stockholm] PHP Fatal error:  Cannot use try without catch or finally in /home/polyverb/public_html/api/subscriptions.php on line 150
+[26-Dec-2025 13:48:22 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 13:48:22 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 13:48:22 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 13:48:22 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 13:48:22 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 13:48:32 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 13:48:32 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 13:48:32 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 13:48:32 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 13:48:32 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 13:48:33 Europe/Stockholm] Stripe API error (HTTP 404): {
+  "error": {
+    "code": "resource_missing",
+    "doc_url": "https://stripe.com/docs/error-codes/resource-missing",
+    "message": "No such subscription: 'sub_1SiJj9QcNsDr739C3AMp538L'",
+    "param": "id",
+    "request_log_url": "https://dashboard.stripe.com/test/logs/req_Si1065Fikr3zgV?t=1766753313",
+    "type": "invalid_request_error"
+  }
+}
+
+[26-Dec-2025 13:48:33 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 13:48:33 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 13:48:33 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 13:48:33 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 13:48:33 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 13:56:59 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 13:56:59 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 13:56:59 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 13:56:59 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 13:56:59 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:03:19 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:03:19 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:03:19 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:03:19 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:03:19 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:03:31 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:03:31 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:03:31 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:03:31 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:03:31 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:04:34 Europe/Stockholm] PHP Warning:  require_once(/home/polyverb/public_html/api/../lib/stripe-reactivate.php): Failed to open stream: No such file or directory in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:04:34 Europe/Stockholm] PHP Fatal error:  Uncaught Error: Failed opening required '/home/polyverb/public_html/api/../lib/stripe-reactivate.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/polyverb/public_html/api/subscriptions.php:2
 Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:09:46 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:09:46 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
+#0 {main}
+  thrown in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:04:48 Europe/Stockholm] PHP Warning:  require_once(/home/polyverb/public_html/api/../lib/stripe-reactivate.php): Failed to open stream: No such file or directory in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:04:48 Europe/Stockholm] PHP Fatal error:  Uncaught Error: Failed opening required '/home/polyverb/public_html/api/../lib/stripe-reactivate.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/polyverb/public_html/api/subscriptions.php:2
 Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:09:49 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:09:49 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
+#0 {main}
+  thrown in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:04:53 Europe/Stockholm] PHP Warning:  require_once(/home/polyverb/public_html/api/../lib/stripe-reactivate.php): Failed to open stream: No such file or directory in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:04:53 Europe/Stockholm] PHP Fatal error:  Uncaught Error: Failed opening required '/home/polyverb/public_html/api/../lib/stripe-reactivate.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/polyverb/public_html/api/subscriptions.php:2
 Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:09:53 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:09:53 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
+#0 {main}
+  thrown in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:05:03 Europe/Stockholm] PHP Warning:  require_once(/home/polyverb/public_html/api/../lib/stripe-reactivate.php): Failed to open stream: No such file or directory in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:05:03 Europe/Stockholm] PHP Fatal error:  Uncaught Error: Failed opening required '/home/polyverb/public_html/api/../lib/stripe-reactivate.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/polyverb/public_html/api/subscriptions.php:2
 Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:10:33 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:10:33 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
+#0 {main}
+  thrown in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:05:14 Europe/Stockholm] PHP Warning:  require_once(/home/polyverb/public_html/api/../lib/stripe-reactivate.php): Failed to open stream: No such file or directory in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:05:14 Europe/Stockholm] PHP Fatal error:  Uncaught Error: Failed opening required '/home/polyverb/public_html/api/../lib/stripe-reactivate.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/polyverb/public_html/api/subscriptions.php:2
 Stack trace:
-#0 /home/polyverb/public_html/api/auth-session.php(9): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:10:37 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:10:37 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
+#0 {main}
+  thrown in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:05:23 Europe/Stockholm] PHP Warning:  require_once(/home/polyverb/public_html/api/../lib/stripe-reactivate.php): Failed to open stream: No such file or directory in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:05:23 Europe/Stockholm] PHP Fatal error:  Uncaught Error: Failed opening required '/home/polyverb/public_html/api/../lib/stripe-reactivate.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/polyverb/public_html/api/subscriptions.php:2
 Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:10:37 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:10:37 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/auth-session.php(9): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:10:38 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:10:38 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:10:40 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:10:40 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:10:45 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:10:45 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:10:53 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:10:53 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:10:53 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:10:53 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/auth-session.php(9): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:10:54 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:10:54 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:10:57 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:10:57 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:11:01 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:11:01 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:11:46 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:11:46 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:12:16 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:12:16 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:12:17 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
-[21-Dec-2025 18:12:17 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:33
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 33
-[21-Dec-2025 18:19:36 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:19:36 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:19:40 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:19:40 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:19:42 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:19:42 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/auth-session.php(9): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:19:42 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:19:42 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:19:43 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:19:43 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:19:45 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:19:45 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:19:49 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:19:49 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:20:08 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:20:08 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:20:08 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:20:08 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/auth-session.php(9): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:20:10 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:20:10 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:20:12 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:20:12 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:20:16 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:20:16 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:22:45 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:22:45 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:22:51 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[21-Dec-2025 18:22:51 Europe/Stockholm] PHP Fatal error:  Uncaught Exception: Database connection failed in /home/polyverb/public_html/config/database.php:25
-Stack trace:
-#0 /home/polyverb/public_html/api/courses.php(10): Database->getConnection()
-#1 {main}
-  thrown in /home/polyverb/public_html/config/database.php on line 25
-[21-Dec-2025 18:24:00 Europe/Stockholm] Connection error: SQLSTATE[28000] [1045] Access denied for user 'polyverb'@'localhost' (using password: YES)
-[25-Dec-2025 13:55:59 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:56:00 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:56:04 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:56:05 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:56:07 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:56:11 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:56:14 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:56:15 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:56:17 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:56:21 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:58:50 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:58:52 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:59:11 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:59:12 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:59:14 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:59:19 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 13:59:33 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 14:00:13 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 122
-[25-Dec-2025 14:00:58 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 152
-[25-Dec-2025 14:01:00 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 152
-[25-Dec-2025 14:01:01 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 152
-[25-Dec-2025 14:01:03 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 152
-[25-Dec-2025 14:01:12 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 152
-[25-Dec-2025 14:01:13 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 152
-[25-Dec-2025 14:01:15 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 152
-[25-Dec-2025 14:02:23 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 152
-[25-Dec-2025 14:02:30 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 152
-[25-Dec-2025 14:02:31 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 152
-[25-Dec-2025 14:02:32 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 152
-[25-Dec-2025 14:03:44 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 153
-[25-Dec-2025 14:03:46 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 153
-[25-Dec-2025 14:03:47 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 153
-[25-Dec-2025 14:03:50 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 153
-[25-Dec-2025 14:03:55 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 153
-[25-Dec-2025 14:03:57 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 153
-[25-Dec-2025 14:03:59 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 153
-[25-Dec-2025 14:04:45 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 153
-[25-Dec-2025 14:05:03 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 153
-[25-Dec-2025 14:05:09 Europe/Stockholm] PHP Parse error:  syntax error, unexpected identifier "BY" in /home/polyverb/public_html/api/courses.php on line 153
+#0 {main}
+  thrown in /home/polyverb/public_html/api/subscriptions.php on line 2
+[26-Dec-2025 14:06:58 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:06:58 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:06:58 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:06:58 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:06:58 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:07:43 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:07:43 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:07:43 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:07:43 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:07:43 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:07:50 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:07:50 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:07:50 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:07:50 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:07:50 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:09:16 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:09:16 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:09:16 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:09:16 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:09:16 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:09:32 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:09:32 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:09:32 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:09:32 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:09:32 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:11:24 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:11:24 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:11:24 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:11:24 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:11:24 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:15:15 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:15:15 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:15:15 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:15:15 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:15:15 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:15:22 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:15:22 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:15:22 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:15:22 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:15:22 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:15:23 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:15:23 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:15:23 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:15:23 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:15:23 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:15:29 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:15:29 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:15:29 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:15:29 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:15:29 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:15:36 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:15:36 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:15:36 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:15:36 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:15:36 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:15:36 Europe/Stockholm] Stripe API error (HTTP 404): {
+  "error": {
+    "code": "resource_missing",
+    "doc_url": "https://stripe.com/docs/error-codes/resource-missing",
+    "message": "No such subscription: 'sub_1SianIQcNsDr739CmNdBB0zF'",
+    "param": "id",
+    "request_log_url": "https://dashboard.stripe.com/test/logs/req_pjEosAQFhR2xPI?t=1766754936",
+    "type": "invalid_request_error"
+  }
+}
+
+[26-Dec-2025 14:15:36 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:15:36 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:15:36 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:15:36 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:15:36 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:16:46 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:16:46 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:16:46 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:16:46 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:16:46 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:16:52 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:16:52 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:16:52 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:16:52 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:16:52 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:16:53 Europe/Stockholm] Stripe API error (HTTP 404): {
+  "error": {
+    "code": "resource_missing",
+    "doc_url": "https://stripe.com/docs/error-codes/resource-missing",
+    "message": "No such subscription: 'sub_1SianIQcNsDr739CmNdBB0zF'",
+    "param": "id",
+    "request_log_url": "https://dashboard.stripe.com/test/logs/req_ZtvTXlaTvdiLB8?t=1766755013",
+    "type": "invalid_request_error"
+  }
+}
+
+[26-Dec-2025 14:16:53 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:16:53 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:16:53 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:16:53 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:16:53 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:19:58 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:19:58 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:19:58 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:19:58 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:19:58 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:20:05 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:20:05 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:20:05 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:20:05 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:20:05 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:20:05 Europe/Stockholm] Stripe API error (HTTP 404): {
+  "error": {
+    "code": "resource_missing",
+    "doc_url": "https://stripe.com/docs/error-codes/resource-missing",
+    "message": "No such subscription: 'sub_1SianIQcNsDr739CmNdBB0zF'",
+    "param": "id",
+    "request_log_url": "https://dashboard.stripe.com/test/logs/req_W1MF1c1IQaiohv?t=1766755205",
+    "type": "invalid_request_error"
+  }
+}
+
+[26-Dec-2025 14:20:05 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:20:05 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:20:05 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:20:05 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:20:05 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:31:32 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:31:32 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:31:32 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:31:32 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:31:32 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:32:11 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:32:11 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:32:11 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:32:11 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:32:11 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:32:20 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:32:20 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:32:20 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:32:20 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:32:20 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:32:20 Europe/Stockholm] Stripe API error (HTTP 404): {
+  "error": {
+    "code": "resource_missing",
+    "doc_url": "https://stripe.com/docs/error-codes/resource-missing",
+    "message": "No such subscription: 'sub_1SianIQcNsDr739CmNdBB0zF'",
+    "param": "id",
+    "request_log_url": "https://dashboard.stripe.com/test/logs/req_OSbap7pMdKNk1A?t=1766755940",
+    "type": "invalid_request_error"
+  }
+}
+
+[26-Dec-2025 14:32:20 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:32:20 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:32:20 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:32:20 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:32:20 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:37:19 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:37:19 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:37:19 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:37:19 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:37:19 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:37:24 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:37:24 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:37:24 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:37:24 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:37:24 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:37:25 Europe/Stockholm] Stripe API error (HTTP 404): {
+  "error": {
+    "code": "resource_missing",
+    "doc_url": "https://stripe.com/docs/error-codes/resource-missing",
+    "message": "No such subscription: 'sub_1SianIQcNsDr739CmNdBB0zF'",
+    "param": "id",
+    "request_log_url": "https://dashboard.stripe.com/test/logs/req_zHWXMejnPhNyHG?t=1766756245",
+    "type": "invalid_request_error"
+  }
+}
+
+[26-Dec-2025 14:37:25 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:37:25 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:37:25 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:37:25 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:37:25 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:39:15 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:39:15 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:39:15 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:39:15 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:39:15 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:39:18 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:39:18 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:39:18 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:39:18 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:39:18 Europe/Stockholm] subscriptions.php: DB-connection OK
+[26-Dec-2025 14:39:18 Europe/Stockholm] Stripe API error (HTTP 404): {
+  "error": {
+    "code": "resource_missing",
+    "doc_url": "https://stripe.com/docs/error-codes/resource-missing",
+    "message": "No such subscription: 'sub_1SianIQcNsDr739CmNdBB0zF'",
+    "param": "id",
+    "request_log_url": "https://dashboard.stripe.com/test/logs/req_VjOA4mzvpZZStt?t=1766756358",
+    "type": "invalid_request_error"
+  }
+}
+
+[26-Dec-2025 14:39:19 Europe/Stockholm] subscriptions.php: start
+[26-Dec-2025 14:39:19 Europe/Stockholm] subscriptions.php: efter session-auth
+[26-Dec-2025 14:39:19 Europe/Stockholm] subscriptions.php: efter database require
+[26-Dec-2025 14:39:19 Europe/Stockholm] subscriptions.php: Database-instans skapad
+[26-Dec-2025 14:39:19 Europe/Stockholm] subscriptions.php: DB-connection OK
