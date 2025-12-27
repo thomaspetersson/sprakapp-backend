@@ -56,14 +56,28 @@ function getChapters($db) {
         $stmt->execute();
         $chapters = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // If user is authenticated, filter chapters based on access
+        // If user is authenticated, add access info to each chapter
         if ($userId) {
-            $chapters = AccessControl::filterChaptersByAccess($db, $userId, $chapters, $courseId);
+            try {
+                $courseAccess = AccessControl::checkCourseAccess($db, $userId, $courseId);
+                $chapterLimit = $courseAccess['chapter_limit'];
+                
+                // Add access info to each chapter
+                foreach ($chapters as &$chapter) {
+                    $chapter['is_accessible'] = ($chapterLimit === null || $chapter['order_number'] <= $chapterLimit);
+                }
+            } catch (Exception $e) {
+                // No access to course, return empty array
+                $chapters = [];
+            }
         } else {
             // For unauthenticated users, check if course is free
             try {
                 AccessControl::checkCourseAccess($db, null, $courseId);
-                // Course is free, return all chapters
+                // Course is free, mark all chapters as accessible
+                foreach ($chapters as &$chapter) {
+                    $chapter['is_accessible'] = true;
+                }
             } catch (Exception $e) {
                 // Course requires payment, return empty array
                 $chapters = [];
