@@ -17,10 +17,30 @@ $user = SessionAuth::requireAuth();
 
 switch ($method) {
     case 'GET':
-        // List user's active subscriptions and slots
-        $stmt = $db->prepare('SELECT us.*, p.name, p.num_courses, p.price_monthly, p.currency FROM sprakapp_user_subscriptions us JOIN sprakapp_subscription_plans p ON us.plan_id = p.id WHERE us.user_id = ? AND us.status = "active" ORDER BY us.start_date DESC');
+        // Cleanup: Delete old pending subscriptions (older than 1 hour) that were never paid
+        $stmt = $db->prepare('DELETE FROM sprakapp_user_subscriptions WHERE status = "pending" AND stripe_subscription_id IS NULL AND created_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)');
+        $stmt->execute();
+        
+        // List user's subscriptions (all active + any cancelled with stripe_subscription_id)
+        $stmt = $db->prepare('SELECT us.* FROM sprakapp_user_subscriptions us WHERE us.user_id = ? AND (us.status = "active" OR us.stripe_subscription_id IS NOT NULL) ORDER BY us.start_date DESC');
         $stmt->execute([$user->user_id]);
         $subs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Enrich with plan data
+        foreach ($subs as &$sub) {
+            $stmt2 = $db->prepare('SELECT name, num_courses, price_monthly, currency FROM sprakapp_subscription_plans WHERE id = ?');
+            $stmt2->execute([$sub['plan_id']]);
+            $plan = $stmt2->fetch(PDO::FETCH_ASSOC);
+            if ($plan) {
+                $sub = array_merge($sub, $plan);
+            }
+        }
+        
+        // DEBUG: Log what we're returning
+        error_log("USER_SUBSCRIPTIONS GET for user {$user->user_id}: " . json_encode(array_map(function($s) {
+            return ['id' => $s['id'], 'status' => $s['status'], 'stripe_id' => $s['stripe_subscription_id']];
+        }, $subs)));
+        
         // Add chosen courses for each subscription
         foreach ($subs as &$sub) {
             $stmt2 = $db->prepare('SELECT course_id FROM sprakapp_user_subscription_courses WHERE user_subscription_id = ?');
@@ -52,16 +72,19 @@ switch ($method) {
                 // Starta ny prenumeration dagen efter gamla slutdatumet
                 $start_date = date('Y-m-d', strtotime($old['end_date'] . ' +1 day'));
             }
-            // Förhindra överlappande aktiva prenumerationer
-            $stmt = $db->prepare('SELECT COUNT(*) FROM sprakapp_user_subscriptions WHERE user_id = ? AND plan_id = ? AND status = "active" AND start_date <= ? AND (end_date IS NULL OR end_date >= ?)');
-            $stmt->execute([$user->user_id, $plan['id'], $start_date, $start_date]);
-            if ($stmt->fetchColumn() > 0) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Du har redan en aktiv prenumeration för denna plan under denna period.']);
-                exit;
+            // Förhindra överlappande aktiva prenumerationer (såvida inte force = true)
+            $force = isset($data->force) && $data->force === true;
+            if (!$force) {
+                $stmt = $db->prepare('SELECT COUNT(*) FROM sprakapp_user_subscriptions WHERE user_id = ? AND plan_id = ? AND status = "active" AND start_date <= ? AND (end_date IS NULL OR end_date >= ?)');
+                $stmt->execute([$user->user_id, $plan['id'], $start_date, $start_date]);
+                if ($stmt->fetchColumn() > 0) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Du har redan en aktiv prenumeration för denna plan under denna period.']);
+                    exit;
+                }
             }
-            // Skapa subscription med rätt startdatum
-            $stmt = $db->prepare('INSERT INTO sprakapp_user_subscriptions (user_id, plan_id, start_date, slots_total, slots_used, status, created_at) VALUES (?, ?, ?, ?, 0, "active", NOW())');
+            // Skapa subscription med status 'pending' tills betalning bekräftas
+            $stmt = $db->prepare('INSERT INTO sprakapp_user_subscriptions (user_id, plan_id, start_date, slots_total, slots_used, status, created_at) VALUES (?, ?, ?, ?, 0, "pending", NOW())');
             $stmt->execute([$user->user_id, $plan['id'], $start_date, $plan['num_courses']]);
             $user_subscription_id = $db->lastInsertId();
             // Koppla kurser
@@ -107,12 +130,9 @@ switch ($method) {
                 'line_items[0][price]' => $stripe_price_id,
                 'line_items[0][quantity]' => 1,
                 'metadata[user_subscription_id]' => $user_subscription_id,
+                'metadata[start_date]' => $start_date,
                 'customer_email' => $user->email,
             ];
-            // Om start_date är i framtiden, sätt Stripe subscription_data[start_date]
-            if ($start_date > date('Y-m-d')) {
-                $stripeParams['subscription_data[start_date]'] = strtotime($start_date . ' 00:00:00');
-            }
             $postData = http_build_query($stripeParams);
             $ch = curl_init('https://api.stripe.com/v1/checkout/sessions');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

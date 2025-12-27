@@ -103,15 +103,11 @@ try {
             $courses = $stmt2->fetchAll(PDO::FETCH_ASSOC);
             $sub['courses'] = $courses;
 
-            // derive stripe_subscription_id and end_date from access rows if present
-            // BUT: do not copy Stripe ID to none/pending subscriptions (they should remain clean)
-            $sub['stripe_subscription_id'] = null;
+            // derive end_date from access rows if present
+            // BUT: keep stripe_subscription_id from the subscription table, not from courses
             $sub['end_date'] = null;
             if ($sub['status'] !== 'none' && $sub['status'] !== 'pending') {
                 foreach ($courses as $c) {
-                    if (!empty($c['stripe_subscription_id'])) {
-                        $sub['stripe_subscription_id'] = $c['stripe_subscription_id'];
-                    }
                     if (!empty($c['end_date'])) {
                         if ($sub['end_date'] === null || $c['end_date'] > $sub['end_date']) {
                             $sub['end_date'] = $c['end_date'];
@@ -121,28 +117,10 @@ try {
             }
         }
 
-        // simple server-side dedupe: keep one per plan (prefer active, then recent)
-        $grouped = [];
-        foreach ($subs as $s) {
-            $key = isset($s['plan_id']) ? $s['plan_id'] : $s['id'];
-            $grouped[$key][] = $s;
-        }
-
-        $deduped = [];
-        foreach ($grouped as $group) {
-            usort($group, function ($a, $b) {
-                $sa = $a['status'] ?? '';
-                $sb = $b['status'] ?? '';
-                if ($sa === 'active' && $sb !== 'active') return -1;
-                if ($sb === 'active' && $sa !== 'active') return 1;
-                return strcmp($b['start_date'] ?? '', $a['start_date'] ?? '');
-            });
-            $deduped[] = $group[0];
-        }
-
-        file_put_contents(__DIR__ . '/subscriptions-cleanup.log', date('c') . " DEDUPED: " . json_encode($deduped) . "\n", FILE_APPEND);
+        // NO deduplication - show all subscriptions as they should all be displayed
+        file_put_contents(__DIR__ . '/subscriptions-cleanup.log', date('c') . " RETURNING_ALL: " . json_encode($subs) . "\n", FILE_APPEND);
         http_response_code(200);
-        echo json_encode(['subscriptions' => $deduped]);
+        echo json_encode(['subscriptions' => $subs]);
         exit();
     }
 
@@ -284,44 +262,70 @@ try {
         }
 
         $subscriptionId = $data['subscription_id'];
-
-        $stmt = $db->prepare("SELECT id, course_id FROM sprakapp_user_course_access WHERE user_id = ? AND stripe_subscription_id = ?");
-        $stmt->execute([$user->user_id, $subscriptionId]);
-        $accessRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        if (!$accessRows) {
+        error_log("DELETE: subscriptionId=$subscriptionId, user_id={$user->user_id}");
+        
+        // First, try to interpret subscription_id as a local ID (integer)
+        $stmt = $db->prepare("SELECT id, stripe_subscription_id FROM sprakapp_user_subscriptions WHERE id = ? AND user_id = ?");
+        $stmt->execute([$subscriptionId, $user->user_id]);
+        $localSub = $stmt->fetch(PDO::FETCH_ASSOC);
+        error_log("DELETE: Lookup by id=" . ($localSub ? 'FOUND' : 'NOT_FOUND'));
+        
+        // If not found locally, interpret as stripe_subscription_id
+        if (!$localSub) {
+            $stmt = $db->prepare("SELECT id, stripe_subscription_id FROM sprakapp_user_subscriptions WHERE stripe_subscription_id = ? AND user_id = ?");
+            $stmt->execute([$subscriptionId, $user->user_id]);
+            $localSub = $stmt->fetch(PDO::FETCH_ASSOC);
+            error_log("DELETE: Lookup by stripe_subscription_id=" . ($localSub ? 'FOUND' : 'NOT_FOUND'));
+        }
+        
+        if (!$localSub) {
             http_response_code(404);
             echo json_encode(['error' => 'Subscription not found']);
             exit();
         }
+        
+        $localSubId = $localSub['id'];
+        $stripeSubId = $localSub['stripe_subscription_id'];
 
-        // Attempt to cancel at Stripe (best-effort)
+        // Get courses for this subscription to find all stripe subscription IDs
+        $stmt = $db->prepare("SELECT DISTINCT stripe_subscription_id FROM sprakapp_user_course_access WHERE user_id = ? AND course_id IN (SELECT course_id FROM sprakapp_user_subscription_courses WHERE user_subscription_id = ?)");
+        $stmt->execute([$user->user_id, $localSubId]);
+        $stripeIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Attempt to cancel all associated Stripe subscriptions
         $cancelledSubscription = null;
-        try {
-            $cancelledSubscription = cancelStripeSubscription($subscriptionId, $stripeConfig['secret_key']);
-        } catch (Exception $e) {
-            error_log('subscriptions.php: Stripe cancel error: ' . $e->getMessage());
+        if ($stripeSubId) {
+            try {
+                $cancelledSubscription = cancelStripeSubscription($stripeSubId, $stripeConfig['secret_key']);
+            } catch (Exception $e) {
+                error_log('subscriptions.php: Stripe cancel error: ' . $e->getMessage());
+            }
         }
 
         try {
             $db->beginTransaction();
-            $stmt = $db->prepare("UPDATE sprakapp_user_course_access SET subscription_status = 'cancelled' WHERE stripe_subscription_id = ? AND user_id = ?");
-            $stmt->execute([$subscriptionId, $user->user_id]);
-
-            $stmt = $db->prepare("UPDATE sprakapp_user_subscriptions SET status = 'cancelled' WHERE stripe_subscription_id = ? AND user_id = ?");
-            $stmt->execute([$subscriptionId, $user->user_id]);
+            
+            // Update all course access rows for this subscription
+            $stmt = $db->prepare("UPDATE sprakapp_user_course_access SET subscription_status = 'cancelled' WHERE user_id = ? AND course_id IN (SELECT course_id FROM sprakapp_user_subscription_courses WHERE user_subscription_id = ?)");
+            $stmt->execute([$user->user_id, $localSubId]);
+            
+            // Mark local subscription as cancelled
+            $stmt = $db->prepare("UPDATE sprakapp_user_subscriptions SET status = 'cancelled' WHERE id = ? AND user_id = ?");
+            $stmt->execute([$localSubId, $user->user_id]);
+            
             $db->commit();
         } catch (Exception $ee) {
             if ($db->inTransaction()) $db->rollBack();
             error_log('subscriptions.php: Failed to mark cancelled: ' . $ee->getMessage());
         }
 
-        // Determine end_date: prefer Stripe's current_period_end, otherwise use MAX(end_date) from access rows
+        // Determine end_date from Stripe or max end_date from access rows
         $endDate = null;
         if (!empty($cancelledSubscription) && isset($cancelledSubscription['current_period_end'])) {
             $endDate = date('Y-m-d', $cancelledSubscription['current_period_end']);
         } else {
-            $stmtMax = $db->prepare('SELECT MAX(end_date) FROM sprakapp_user_course_access WHERE user_id = ? AND stripe_subscription_id = ?');
-            $stmtMax->execute([$user->user_id, $subscriptionId]);
+            $stmtMax = $db->prepare('SELECT MAX(end_date) FROM sprakapp_user_course_access WHERE user_id = ? AND course_id IN (SELECT course_id FROM sprakapp_user_subscription_courses WHERE user_subscription_id = ?)');
+            $stmtMax->execute([$user->user_id, $localSubId]);
             $maxEnd = $stmtMax->fetchColumn();
             if (!empty($maxEnd)) {
                 $endDate = date('Y-m-d', strtotime($maxEnd));

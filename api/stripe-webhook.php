@@ -157,17 +157,50 @@ try {
     // Handle different event types
     switch ($event->type) {
         case 'checkout.session.completed':
-            // Payment successful - grant course access
+            // Payment successful - update subscription status and grant course access
             $session = $event->data->object;
-            $courseId = $session->metadata->course_id;
-            $userId = $session->metadata->user_id;
+            $userSubscriptionId = $session->metadata->user_subscription_id ?? null;
             $subscriptionId = $session->subscription;
             $customerId = $session->customer;
             
-            if (assignCourseAccess($db, $userId, $courseId, $subscriptionId, $customerId)) {
-                error_log("Course access granted: User $userId -> Course $courseId (Subscription: $subscriptionId)");
+            logWebhook("checkout.session.completed: userSubscriptionId=$userSubscriptionId, stripeSubscriptionId=$subscriptionId");
+            
+            if ($userSubscriptionId) {
+                // New flow: Update subscription status to active and set stripe_subscription_id
+                $stmt = $db->prepare('UPDATE sprakapp_user_subscriptions SET status = "active", stripe_subscription_id = ? WHERE id = ?');
+                $result = $stmt->execute([$subscriptionId, $userSubscriptionId]);
+                logWebhook("Updated subscription $userSubscriptionId to active: " . ($result ? "SUCCESS" : "FAILED"));
+                
+                // Get user_id and course_ids from subscription
+                $stmt = $db->prepare('SELECT user_id FROM sprakapp_user_subscriptions WHERE id = ?');
+                $stmt->execute([$userSubscriptionId]);
+                $sub = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($sub) {
+                    $userId = $sub['user_id'];
+                    
+                    // Grant access to all chosen courses
+                    $stmt = $db->prepare('SELECT course_id FROM sprakapp_user_subscription_courses WHERE user_subscription_id = ?');
+                    $stmt->execute([$userSubscriptionId]);
+                    $courses = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                    
+                    foreach ($courses as $courseId) {
+                        assignCourseAccess($db, $userId, $courseId, $subscriptionId, $customerId);
+                        logWebhook("Granted access: User $userId -> Course $courseId");
+                    }
+                }
             } else {
-                error_log("Failed to grant course access: User $userId -> Course $courseId");
+                // Old flow: single course assignment (deprecated)
+                $courseId = $session->metadata->course_id ?? null;
+                $userId = $session->metadata->user_id ?? null;
+                
+                if ($userId && $courseId) {
+                    if (assignCourseAccess($db, $userId, $courseId, $subscriptionId, $customerId)) {
+                        error_log("Course access granted: User $userId -> Course $courseId (Subscription: $subscriptionId)");
+                    } else {
+                        error_log("Failed to grant course access: User $userId -> Course $courseId");
+                    }
+                }
             }
             break;
             
