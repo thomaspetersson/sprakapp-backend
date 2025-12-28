@@ -348,7 +348,8 @@ try {
                 'reward_type' => $config['reward_type'],
                 'reward_value' => $config['reward_value'],
                 'invited_user_trial_days' => (int)$config['invited_user_trial_days'],
-                'new_user_trial_days' => (int)$config['new_user_trial_days']
+                'new_user_trial_days' => (int)$config['new_user_trial_days'],
+                'trial_chapter_limit' => (int)$config['trial_chapter_limit']
             ]);
             break;
             

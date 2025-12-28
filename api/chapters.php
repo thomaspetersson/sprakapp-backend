@@ -167,8 +167,8 @@ function createChapter($db) {
     try {
         $chapterId = bin2hex(random_bytes(16));
         
-        $query = "INSERT INTO sprakapp_chapters (id, course_id, title, description, order_number, target_text, translation, grammar_explanation, image_url, speech_voice_name, audio_file_url, speech_rate, is_published) 
-                  VALUES (:id, :course_id, :title, :description, :order_number, :target_text, :translation, :grammar_explanation, :image_url, :speech_voice_name, :audio_file_url, :speech_rate, :is_published)";
+        $query = "INSERT INTO sprakapp_chapters (id, course_id, title, description, order_number, target_text, translation, grammar_explanation, image_url, speech_voice_name, audio_file_url, speech_rate) 
+                  VALUES (:id, :course_id, :title, :description, :order_number, :target_text, :translation, :grammar_explanation, :image_url, :speech_voice_name, :audio_file_url, :speech_rate)";
         
         $stmt = $db->prepare($query);
         $stmt->bindParam(':id', $chapterId);
@@ -192,8 +192,6 @@ function createChapter($db) {
         $stmt->bindParam(':audio_file_url', $audio_file_url);
         $speech_rate = $data->speech_rate ?? 1.00;
         $stmt->bindParam(':speech_rate', $speech_rate);
-        $is_published = isset($data->is_published) ? (int)$data->is_published : 0;
-        $stmt->bindParam(':is_published', $is_published);
         $stmt->execute();
         
         sendSuccess(['id' => $chapterId, 'message' => 'Chapter created'], 201);
@@ -250,10 +248,7 @@ function updateChapter($db, $id) {
             $fields[] = "speech_rate = :speech_rate";
             $params[':speech_rate'] = $data->speech_rate;
         }
-        if (isset($data->is_published)) {
-            $fields[] = "is_published = :is_published";
-            $params[':is_published'] = (int)$data->is_published;
-        }
+
         
         if (empty($fields)) {
             sendError('No fields to update', 400);

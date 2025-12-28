@@ -19,9 +19,9 @@ class AccessControl {
             ];
         }
         
-        // Check if course is public (no payment required)
+        // Check if course exists and is published
         $stmt = $db->prepare("
-            SELECT price_monthly 
+            SELECT id
             FROM sprakapp_courses 
             WHERE id = ? AND is_published = 1
         ");
@@ -30,16 +30,6 @@ class AccessControl {
         
         if (!$course) {
             throw new Exception('Course not found or not published');
-        }
-        
-        // If course is free (price_monthly = 0 or NULL), allow access
-        if (!$course->price_monthly || $course->price_monthly == 0) {
-            return [
-                'has_access' => true,
-                'is_free' => true,
-                'chapter_limit' => null,
-                'end_date' => null
-            ];
         }
         
         // Check user's access in database
@@ -58,7 +48,17 @@ class AccessControl {
         $access = $stmt->fetch(PDO::FETCH_OBJ);
         
         if (!$access) {
-            throw new Exception('No access to this course. Please purchase access.');
+            // No explicit access record found - give trial access (5 chapters)
+            // Admin users get unlimited access
+            $chapterLimit = (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') ? null : 5;
+            
+            return [
+                'has_access' => true,
+                'is_trial' => true,
+                'chapter_limit' => $chapterLimit,
+                'end_date' => null,
+                'subscription_status' => 'trial'
+            ];
         }
         
         // Check if access has expired

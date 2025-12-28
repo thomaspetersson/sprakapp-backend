@@ -1,6 +1,8 @@
 <?php
+// Disable error display to prevent JSON corruption
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../middleware/session-auth.php';
@@ -177,7 +179,10 @@ function revokeCourseFromUser($db) {
 }
 
 function updateUserCourseDates($db) {
+    error_log('[admin.php] updateUserCourseDates called');
+    
     $data = json_decode(file_get_contents("php://input"));
+    error_log('[admin.php] Received data: ' . json_encode($data));
     
     // Support both userCourseId (new) and user_id + course_id (legacy)
     if (isset($data->userCourseId)) {
@@ -186,27 +191,34 @@ function updateUserCourseDates($db) {
             $fields = [];
             $params = [':id' => $data->userCourseId];
             
-            if (isset($data->start_date)) {
+            if (isset($data->startDate)) {
                 $fields[] = "start_date = :start_date";
                 // Convert ISO datetime to DATE format
-                $params[':start_date'] = $data->start_date ? date('Y-m-d', strtotime($data->start_date)) : null;
+                $params[':start_date'] = $data->startDate ? date('Y-m-d', strtotime($data->startDate)) : null;
+                error_log('[admin.php] Setting start_date to: ' . $params[':start_date']);
             }
-            if (isset($data->end_date)) {
+            if (isset($data->endDate)) {
                 $fields[] = "end_date = :end_date";
                 // Convert ISO datetime to DATE format
-                $params[':end_date'] = $data->end_date ? date('Y-m-d', strtotime($data->end_date)) : null;
+                $params[':end_date'] = $data->endDate ? date('Y-m-d', strtotime($data->endDate)) : null;
+                error_log('[admin.php] Setting end_date to: ' . $params[':end_date']);
             }
-            if (isset($data->chapter_limit)) {
+            if (isset($data->chapterLimit)) {
                 $fields[] = "chapter_limit = :chapter_limit";
-                $params[':chapter_limit'] = $data->chapter_limit;
+                $params[':chapter_limit'] = $data->chapterLimit;
+                error_log('[admin.php] Setting chapter_limit to: ' . $params[':chapter_limit']);
             }
             
             if (empty($fields)) {
+                error_log('[admin.php] No fields to update');
                 sendError('No dates to update', 400);
             }
             
             $query = "UPDATE sprakapp_user_course_access SET " . implode(', ', $fields) . " 
                       WHERE id = :id";
+            error_log('[admin.php] SQL Query: ' . $query);
+            error_log('[admin.php] Parameters: ' . json_encode($params));
+            
             $stmt = $db->prepare($query);
             
             foreach ($params as $key => $value) {
@@ -216,10 +228,14 @@ function updateUserCourseDates($db) {
             $stmt->execute();
             
             if ($stmt->rowCount() === 0) {
+                error_log('[admin.php] No rows updated - assignment not found');
                 sendError('Course assignment not found', 404);
+                return;
             }
             
+            error_log('[admin.php] Successfully updated assignment');
             sendSuccess(['message' => 'Course dates updated']);
+            return;
             
         } catch (Exception $e) {
             sendError('Failed to update course dates: ' . $e->getMessage(), 500);
