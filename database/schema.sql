@@ -58,7 +58,6 @@ CREATE TABLE IF NOT EXISTS sprakapp_chapters (
     speech_voice_name VARCHAR(255),
     audio_file_url VARCHAR(500),
     speech_rate DECIMAL(3,2) DEFAULT 1.00,
-    is_published BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (course_id) REFERENCES sprakapp_courses(id) ON DELETE CASCADE,
