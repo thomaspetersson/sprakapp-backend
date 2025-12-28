@@ -87,25 +87,20 @@ function register($db) {
                 
                 if ($config && $config['is_active']) {
                     $trialDays = (int)$config['invited_user_trial_days'];
-                    error_log('[Referral DEBUG] Set trial days to: ' . $trialDays);
+                    error_log('[Referral DEBUG] Set trial days to invited_user_trial_days: ' . $trialDays);
                 }
             } else {
                 error_log('[Referral DEBUG] Referral code not found in database: ' . $referralCode);
             }
         } else {
+            // Get default trial days from config for non-referred users
             error_log('[Referral DEBUG] No referral code provided in request');
-                
-                if ($config && $config['is_active']) {
-                    $trialDays = (int)$config['invited_user_trial_days'];
-                }
-            }
-        } else {
-            // Get default trial days from config
             $stmt = $db->prepare('SELECT new_user_trial_days FROM sprakapp_referral_config ORDER BY id DESC LIMIT 1');
             $stmt->execute();
             $config = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($config) {
                 $trialDays = (int)$config['new_user_trial_days'];
+                error_log('[Referral DEBUG] Set trial days to new_user_trial_days: ' . $trialDays);
             }
         }
 

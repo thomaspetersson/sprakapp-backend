@@ -318,6 +318,10 @@ try {
             ');
             $stmt->execute([$user->user_id]);
             $activeTrialCourse = $stmt->fetchColumn();
+            
+            // Check if user has trial access (trial_expires_at is not null and not expired)
+            $hasTrialAccess = !empty($userData['trial_expires_at']) && strtotime($userData['trial_expires_at']) > time();
+            $hasSelectedTrialCourse = !!$activeTrialCourse;
 
             // Calculate progress to next reward
             $successfulInvites = (int)$inviteCounts['successful_invites'];
@@ -332,6 +336,8 @@ try {
                 'referral_link' => 'https://polyverbo.com/ref/' . $userData['referral_code'],
                 'referred_by' => $userData['referred_by'],
                 'trial_expires_at' => $userData['trial_expires_at'],
+                'has_trial_access' => $hasTrialAccess,
+                'has_selected_trial_course' => $hasSelectedTrialCourse,
                 'total_invites' => (int)$inviteCounts['total_invites'],
                 'successful_invites' => $successfulInvites,
                 'invites_until_reward' => $invitesUntilReward,
@@ -340,7 +346,9 @@ try {
                 'credits_balance' => $creditsBalance,
                 'hasActiveTrialCourse' => !!$activeTrialCourse,
                 'reward_type' => $config['reward_type'],
-                'reward_value' => $config['reward_value']
+                'reward_value' => $config['reward_value'],
+                'invited_user_trial_days' => (int)$config['invited_user_trial_days'],
+                'new_user_trial_days' => (int)$config['new_user_trial_days']
             ]);
             break;
             
@@ -505,16 +513,10 @@ try {
                 exit;
             }
             
-            // Check if user was referred and has trial period
-            $stmt = $db->prepare('SELECT referred_by, trial_expires_at FROM sprakapp_users WHERE id = ?');
+            // Check if user has an active trial period
+            $stmt = $db->prepare('SELECT trial_expires_at FROM sprakapp_users WHERE id = ?');
             $stmt->execute([$user->user_id]);
             $userData = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$userData['referred_by']) {
-                http_response_code(403);
-                echo json_encode(['error' => 'Only referred users can select trial courses']);
-                exit;
-            }
             
             $trialExpiresAt = $userData['trial_expires_at'];
             if (!$trialExpiresAt || strtotime($trialExpiresAt) <= time()) {
@@ -532,7 +534,7 @@ try {
                 exit;
             }
             
-            // Check if user already has an active trial course from referral
+            // Check if user already has an active trial course access
             $stmt = $db->prepare('
                 SELECT COUNT(*) as count FROM sprakapp_user_course_access 
                 WHERE user_id = ? AND end_date > NOW()
