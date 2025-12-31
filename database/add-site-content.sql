@@ -41,4 +41,20 @@ INSERT INTO sprakapp_site_content (content_key, title_sv, title_en, description_
  'Börja din språkresa nu',
  'Start your language journey now',
  'Registrera dig gratis och få tillgång till våra kurser.',
- 'Sign up for free and get access to our courses.');
+ 'Sign up for free and get access to our courses.'),
+
+('cta_button',
+ 'Registrera dig',
+ 'Sign Up',
+ 'Kom igång gratis',
+ 'Get Started Free',
+ NULL,
+ NULL),
+
+('browse_courses',
+ 'Bläddra bland kurser',
+ 'Browse Courses',
+ 'Utforska våra språkkurser',
+ 'Explore our language courses',
+ NULL,
+ NULL);
