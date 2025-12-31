@@ -5,13 +5,15 @@ header('Content-Type: application/json');
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Middleware
-require_once __DIR__ . '/../middleware/auth-middleware.php';
+// Start session för auth
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Kontrollera admin-behörighet
-if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
+// Kontrollera admin-behörighet (samma som andra API:er använder)
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
     http_response_code(403);
-    echo json_encode(['error' => 'Unauthorized']);
+    echo json_encode(['error' => 'Unauthorized - Admin access required']);
     exit;
 }
 
