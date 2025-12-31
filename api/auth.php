@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../middleware/auth.php';
 require_once __DIR__ . '/../middleware/rate-limit.php';
 require_once __DIR__ . '/../middleware/csrf-protection.php';
+require_once __DIR__ . '/../lib/EmailHelper.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
@@ -120,10 +121,14 @@ function register($db) {
         $userId = bin2hex(random_bytes(16));
         $passwordHash = Auth::hashPassword($data->password);
         
+        // Generate verification token
+        $verificationToken = bin2hex(random_bytes(32));
+        $verificationExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+        
         $db->beginTransaction();
         
-        $query = "INSERT INTO sprakapp_users (id, email, password_hash, referral_code, referred_by, trial_expires_at) 
-                  VALUES (:id, :email, :password_hash, :referral_code, :referred_by, :trial_expires_at)";
+        $query = "INSERT INTO sprakapp_users (id, email, password_hash, referral_code, referred_by, trial_expires_at, email_verified, verification_token, verification_token_expires) 
+                  VALUES (:id, :email, :password_hash, :referral_code, :referred_by, :trial_expires_at, FALSE, :verification_token, :verification_token_expires)";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':id', $userId);
         $stmt->bindParam(':email', $data->email);
@@ -131,6 +136,8 @@ function register($db) {
         $stmt->bindParam(':referral_code', $newReferralCode);
         $stmt->bindParam(':referred_by', $referrerId);
         $stmt->bindParam(':trial_expires_at', $trialExpiresAt);
+        $stmt->bindParam(':verification_token', $verificationToken);
+        $stmt->bindParam(':verification_token_expires', $verificationExpires);
         $stmt->execute();
         
         // Create profile
@@ -161,18 +168,24 @@ function register($db) {
         
         $db->commit();
         
-        $token = Auth::generateToken($userId, $data->email, 'user');
+        // Send verification email
+        try {
+            $emailHelper = new EmailHelper();
+            $emailSent = $emailHelper->sendVerificationEmail($data->email, $verificationToken);
+            
+            if (!$emailSent) {
+                error_log('[Registration] Failed to send verification email to ' . $data->email);
+            }
+        } catch (Exception $e) {
+            error_log('[Registration] Email error: ' . $e->getMessage());
+            // Don't fail registration if email fails
+        }
         
+        // Don't generate token yet - user must verify email first
         sendSuccess([
-            'user' => [
-                'id' => $userId,
-                'email' => $data->email,
-                'role' => 'user',
-                'referral_code' => $newReferralCode,
-                'trial_expires_at' => $trialExpiresAt,
-                'was_referred' => $referrerId !== null
-            ],
-            'token' => $token
+            'message' => 'Registration successful! Please check your email to verify your account.',
+            'email' => $data->email,
+            'email_verification_required' => true
         ], 201);
         
     } catch (Exception $e) {
@@ -218,7 +231,7 @@ function login($db) {
     }
 
     try {
-        $query = "SELECT u.id, u.email, u.password_hash, p.role 
+        $query = "SELECT u.id, u.email, u.password_hash, u.email_verified, p.role 
                   FROM sprakapp_users u 
                   LEFT JOIN sprakapp_profiles p ON u.id = p.id 
                   WHERE u.email = :email";
@@ -234,6 +247,11 @@ function login($db) {
         
         if (!Auth::verifyPassword($data->password, $user['password_hash'])) {
             sendError('Invalid credentials', 401);
+        }
+        
+        // Check if email is verified
+        if (!$user['email_verified']) {
+            sendError('Please verify your email address before logging in. Check your inbox for the verification link.', 403);
         }
         
         // Auto-complete onboarding on first login if not already done

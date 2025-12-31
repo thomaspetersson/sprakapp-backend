@@ -3,6 +3,7 @@
 session_start();
 
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../lib/EmailHelper.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
@@ -103,14 +104,18 @@ function register($db) {
         $userReferralCode = strtoupper(substr(md5($userId . time()), 0, 10));
         $trialExpiresAt = date('Y-m-d H:i:s', strtotime("+{$trialDays} days"));
         
+        // Generate verification token
+        $verificationToken = bin2hex(random_bytes(32));
+        $verificationExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+        
         error_log('[Referral DEBUG] Creating user with trial_expires_at: ' . $trialExpiresAt);
         error_log('[Referral DEBUG] referred_by: ' . ($referrerId ?? 'NULL'));
         
         $db->beginTransaction();
         
-        // Insert user with referral fields
-        $query = "INSERT INTO sprakapp_users (id, email, password_hash, referral_code, referred_by, trial_expires_at, onboarding_completed) 
-                  VALUES (:id, :email, :password_hash, :referral_code, :referred_by, :trial_expires_at, 0)";
+        // Insert user with referral fields and email verification
+        $query = "INSERT INTO sprakapp_users (id, email, password_hash, referral_code, referred_by, trial_expires_at, onboarding_completed, email_verified, verification_token, verification_token_expires) 
+                  VALUES (:id, :email, :password_hash, :referral_code, :referred_by, :trial_expires_at, 0, FALSE, :verification_token, :verification_token_expires)";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':id', $userId);
         $stmt->bindParam(':email', $data->email);
@@ -118,6 +123,8 @@ function register($db) {
         $stmt->bindParam(':referral_code', $userReferralCode);
         $stmt->bindParam(':referred_by', $referrerId);
         $stmt->bindParam(':trial_expires_at', $trialExpiresAt);
+        $stmt->bindParam(':verification_token', $verificationToken);
+        $stmt->bindParam(':verification_token_expires', $verificationExpires);
         $stmt->execute();
         
         // Create profile
@@ -138,17 +145,26 @@ function register($db) {
                 error_log('[Referral DEBUG] Successfully logged signup event');
             } else {
                 error_log('[Referral DEBUG] Failed to log signup event');
+            }nd verification email
+        try {
+            $emailHelper = new EmailHelper();
+            $emailSent = $emailHelper->sendVerificationEmail($data->email, $verificationToken);
+            
+            if ($emailSent) {
+                error_log('[Registration] Verification email sent successfully to ' . $data->email);
+            } else {
+                error_log('[Registration] Failed to send verification email to ' . $data->email);
             }
+        } catch (Exception $e) {
+            error_log('[Registration] Email error: ' . $e->getMessage());
+            // Don't fail registration if email fails
         }
         
-        $db->commit();
-        error_log('[Referral DEBUG] Transaction committed successfully');
-        
-        // Set session
-        $_SESSION['user_id'] = $userId;
-        $_SESSION['email'] = $data->email;
-        $_SESSION['role'] = 'user';
-        
+        // Don't set session - user must verify email first
+        sendSuccess([
+            'message' => 'Registration successful! Please check your email to verify your account.',
+            'email' => $data->email,
+            'email_verification_required' => true
         sendSuccess([
             'user' => [
                 'id' => $userId,
@@ -159,22 +175,27 @@ function register($db) {
         
     } catch (Exception $e) {
         if ($db->inTransaction()) {
-            $db->rollBack();
+            $db->rollBack();u.email_verified, p.role, p.first_name, p.last_name, p.avatar_url
+                  FROM sprakapp_users u 
+                  LEFT JOIN sprakapp_profiles p ON u.id = p.id 
+                  WHERE u.email = :email";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':email', $data->email);
+        $stmt->execute();
+        
+        if ($stmt->rowCount() === 0) {
+            sendError('Invalid credentials', 401);
         }
-        error_log('[Referral DEBUG] Registration failed with exception: ' . $e->getMessage());
-        sendError('Registration failed: ' . $e->getMessage(), 500);
-    }
-}
-
-function login($db) {
-    $data = json_decode(file_get_contents("php://input"));
-    
-    if (!isset($data->email) || !isset($data->password)) {
-        sendError('Email and password required', 400);
-    }
-
-    try {
-        $query = "SELECT u.id, u.email, u.password_hash, p.role, p.first_name, p.last_name, p.avatar_url
+        
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!password_verify($data->password, $user['password_hash'])) {
+            sendError('Invalid credentials', 401);
+        }
+        
+        // Check if email is verified
+        if (!$user['email_verified']) {
+            sendError('Please verify your email address before logging in. Check your inbox for the verification link.', 403rd_hash, p.role, p.first_name, p.last_name, p.avatar_url
                   FROM sprakapp_users u 
                   LEFT JOIN sprakapp_profiles p ON u.id = p.id 
                   WHERE u.email = :email";
