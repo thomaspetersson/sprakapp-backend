@@ -14,6 +14,7 @@
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../middleware/session-auth.php';
+require_once __DIR__ . '/../lib/reward-tiers.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -73,10 +74,6 @@ function getReferralConfig($db) {
             'new_user_trial_days' => 7,
             'invited_user_trial_days' => 14,
             'trial_chapter_limit' => 3,
-            'required_invites_for_reward' => 3,
-            'reward_type' => 'free_month',
-            'reward_value' => 30,
-            'reward_chapter_limit' => 3,
             'is_active' => true
         ];
     }
@@ -102,49 +99,8 @@ function getSuccessfulInvitesCount($db, $userId) {
  * Check if user is eligible for reward and grant it
  */
 function checkAndGrantReward($db, $referrerId) {
-    $config = getReferralConfig($db);
-    $successfulInvites = getSuccessfulInvitesCount($db, $referrerId);
-    $requiredInvites = (int)$config['required_invites_for_reward'];
-    
-    // Check if user already has a reward at this level
-    $stmt = $db->prepare('
-        SELECT id FROM sprakapp_referral_rewards 
-        WHERE user_id = ? AND invites_at_grant >= ?
-    ');
-    $stmt->execute([$referrerId, $successfulInvites]);
-    
-    if ($stmt->rowCount() > 0) {
-        // Already has reward at this level
-        return null;
-    }
-    
-    // Check if eligible for new reward
-    if ($successfulInvites >= $requiredInvites && $successfulInvites % $requiredInvites === 0) {
-        // Grant new reward
-        $stmt = $db->prepare('
-            INSERT INTO sprakapp_referral_rewards 
-            (user_id, reward_type, reward_value, invites_at_grant, reward_status) 
-            VALUES (?, ?, ?, ?, "pending")
-        ');
-        $stmt->execute([
-            $referrerId,
-            $config['reward_type'],
-            $config['reward_value'],
-            $successfulInvites
-        ]);
-        
-        // If reward type is credits, add them immediately
-        if ($config['reward_type'] === 'credits') {
-            addCredits($db, $referrerId, (int)$config['reward_value'], 'Referral reward', $db->lastInsertId());
-        }
-        
-        return [
-            'reward_id' => $db->lastInsertId(),
-            'reward_type' => $config['reward_type'],
-            'reward_value' => $config['reward_value']
-        ];
-    }
-    
+    // Now handled by tier system - this function is deprecated
+    // Auto-grant rewards are handled by the new tier system
     return null;
 }
 
@@ -247,9 +203,6 @@ try {
                         new_user_trial_days = COALESCE(?, new_user_trial_days),
                         invited_user_trial_days = COALESCE(?, invited_user_trial_days),
                         trial_chapter_limit = COALESCE(?, trial_chapter_limit),
-                        required_invites_for_reward = COALESCE(?, required_invites_for_reward),
-                        reward_type = COALESCE(?, reward_type),
-                        reward_value = COALESCE(?, reward_value),
                         is_active = COALESCE(?, is_active),
                         updated_at = NOW()
                     WHERE id = (SELECT id FROM (SELECT MAX(id) as id FROM sprakapp_referral_config) as t)
@@ -258,9 +211,6 @@ try {
                     $data['new_user_trial_days'] ?? null,
                     $data['invited_user_trial_days'] ?? null,
                     $data['trial_chapter_limit'] ?? null,
-                    $data['required_invites_for_reward'] ?? null,
-                    $data['reward_type'] ?? null,
-                    $data['reward_value'] ?? null,
                     isset($data['is_active']) ? ($data['is_active'] ? 1 : 0) : null
                 ]);
                 
@@ -323,14 +273,13 @@ try {
             $hasTrialAccess = !empty($userData['trial_expires_at']) && strtotime($userData['trial_expires_at']) > time();
             $hasSelectedTrialCourse = !!$activeTrialCourse;
 
-            // Calculate progress to next reward
-            $successfulInvites = (int)$inviteCounts['successful_invites'];
-            $requiredForNext = (int)$config['required_invites_for_reward'];
+            // Always use reward tiers system
+            $rewardStats = getRewardStatsWithTiers($db, $user->user_id);
+            $successfulInvites = $rewardStats['successful_invites'];
+            $invitesUntilReward = $rewardStats['invites_until_next_reward'];
+            $requiredForNext = $rewardStats['next_tier'] ? $rewardStats['next_tier']['required_invites'] : 0;
             
-            // Calculate invites needed (simple subtraction, not modulo)
-            $invitesUntilReward = max(0, $requiredForNext - $successfulInvites);
-            
-            echo json_encode([
+            $responseData = [
                 'success' => true,
                 'referral_code' => $userData['referral_code'],
                 'referral_link' => 'https://polyverbo.com/ref/' . $userData['referral_code'],
@@ -341,16 +290,30 @@ try {
                 'total_invites' => (int)$inviteCounts['total_invites'],
                 'successful_invites' => $successfulInvites,
                 'invites_until_reward' => $invitesUntilReward,
-                'required_invites_for_reward' => $requiredForNext,
                 'rewards' => $rewards,
                 'credits_balance' => $creditsBalance,
                 'hasActiveTrialCourse' => !!$activeTrialCourse,
-                'reward_type' => $config['reward_type'],
-                'reward_value' => $config['reward_value'],
                 'invited_user_trial_days' => (int)$config['invited_user_trial_days'],
                 'new_user_trial_days' => (int)$config['new_user_trial_days'],
                 'trial_chapter_limit' => (int)$config['trial_chapter_limit']
-            ]);
+            ];
+            
+            // Always add tiers information
+            $availableTiers = getAvailableRewardTiers($db, $user->user_id);
+            $nextTier = getNextRewardTier($db, $user->user_id);
+            $unclaimedCount = 0;
+            
+            foreach ($availableTiers as $tier) {
+                if ($tier['claimed_status'] === null) {
+                    $unclaimedCount++;
+                }
+            }
+            
+            $responseData['available_tiers'] = $availableTiers;
+            $responseData['next_tier'] = $nextTier;
+            $responseData['unclaimed_rewards_count'] = $unclaimedCount;
+            
+            echo json_encode($responseData);
             break;
             
         case 'validate':
@@ -402,8 +365,8 @@ try {
                 ');
                 $stmt->execute([$userData['referred_by'], $user->user_id]);
                 
-                // Check if referrer should get a reward
-                $reward = checkAndGrantReward($db, $userData['referred_by']);
+                // Check if referrer should get a reward (always use tiers system)
+                $reward = checkAndGrantRewardWithTiers($db, $userData['referred_by']);
                 
                 echo json_encode([
                     'success' => true,
@@ -437,69 +400,90 @@ try {
         case 'create_reward':
             $user = SessionAuth::requireAuth();
             
-            $config = getReferralConfig($db);
-            $successfulInvites = getSuccessfulInvitesCount($db, $user->user_id);
-            $requiredInvites = (int)$config['required_invites_for_reward'];
-            
-            // Check if eligible for reward
-            if ($successfulInvites < $requiredInvites) {
+            try {
+                if (hasRewardTiers($db)) {
+                    // Use new tiers system
+                    $data = json_decode(file_get_contents('php://input'), true);
+                    $tierId = $data['tier_id'] ?? null;
+                    
+                    if (!$tierId) {
+                        // Get next available tier automatically
+                        $nextTier = getNextAvailableRewardTier($db, $user->user_id);
+                        if (!$nextTier) {
+                            http_response_code(400);
+                            echo json_encode(['error' => 'No available rewards to claim']);
+                            exit;
+                        }
+                        $tierId = $nextTier['id'];
+                    }
+                    
+                    $reward = createRewardForTier($db, $user->user_id, $tierId);
+                    echo json_encode(['success' => true, 'reward' => $reward]);
+                } else {
+                    // Fallback to legacy system
+                    $config = getReferralConfig($db);
+                    $successfulInvites = getSuccessfulInvitesCount($db, $user->user_id);
+                    // Note: Old reward system deprecated, use tier-based claiming instead
+                    http_response_code(400);
+                    echo json_encode([
+                        'error' => 'This reward claiming method is deprecated. Please use tier-based rewards.',
+                        'message' => 'Use the new tier system for reward claiming'
+                    ]);
+                    exit;
+                    
+                    // Check if reward already exists at this level
+                    $stmt = $db->prepare('
+                        SELECT COUNT(*) as reward_count FROM sprakapp_referral_rewards 
+                        WHERE user_id = ?
+                    ');
+                    $stmt->execute([$user->user_id]);
+                    $rewardCount = (int)$stmt->fetchColumn();
+                    
+                    // Max 10 rewards per user to prevent abuse
+                    if ($rewardCount >= 10) {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Maximum rewards limit reached (10 rewards per user)']);
+                        exit;
+                    }
+                    
+                    $stmt = $db->prepare('
+                        SELECT id FROM sprakapp_referral_rewards 
+                        WHERE user_id = ? AND invites_at_grant >= ?
+                    ');
+                    $stmt->execute([$user->user_id, $successfulInvites]);
+                    
+                    if ($stmt->rowCount() > 0) {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Reward already created for this level']);
+                        exit;
+                    }
+                    
+                    // Create the reward
+                    $stmt = $db->prepare('
+                        INSERT INTO sprakapp_referral_rewards 
+                        (user_id, reward_type, reward_value, reward_status, invites_at_grant) 
+                        VALUES (?, ?, ?, "pending", ?)
+                    ');
+                    $stmt->execute([
+                        $user->user_id,
+                        $config['reward_type'],
+                        $config['reward_value'],
+                        $successfulInvites
+                    ]);
+                    
+                    $rewardId = $db->lastInsertId();
+                    
+                    // Fetch the created reward
+                    $stmt = $db->prepare('SELECT * FROM sprakapp_referral_rewards WHERE id = ?');
+                    $stmt->execute([$rewardId]);
+                    $reward = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    echo json_encode(['success' => true, 'reward' => $reward]);
+                }
+            } catch (Exception $e) {
                 http_response_code(400);
-                echo json_encode([
-                    'error' => 'Not enough successful invites',
-                    'current' => $successfulInvites,
-                    'required' => $requiredInvites
-                ]);
-                exit;
+                echo json_encode(['error' => $e->getMessage()]);
             }
-            
-            // Check if reward already exists at this level
-            $stmt = $db->prepare('
-                SELECT COUNT(*) as reward_count FROM sprakapp_referral_rewards 
-                WHERE user_id = ?
-            ');
-            $stmt->execute([$user->user_id]);
-            $rewardCount = (int)$stmt->fetchColumn();
-            
-            // Max 10 rewards per user to prevent abuse
-            if ($rewardCount >= 10) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Maximum rewards limit reached (10 rewards per user)']);
-                exit;
-            }
-            
-            $stmt = $db->prepare('
-                SELECT id FROM sprakapp_referral_rewards 
-                WHERE user_id = ? AND invites_at_grant >= ?
-            ');
-            $stmt->execute([$user->user_id, $successfulInvites]);
-            
-            if ($stmt->rowCount() > 0) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Reward already created for this level']);
-                exit;
-            }
-            
-            // Create the reward
-            $stmt = $db->prepare('
-                INSERT INTO sprakapp_referral_rewards 
-                (user_id, reward_type, reward_value, reward_status, invites_at_grant) 
-                VALUES (?, ?, ?, "pending", ?)
-            ');
-            $stmt->execute([
-                $user->user_id,
-                $config['reward_type'],
-                $config['reward_value'],
-                $successfulInvites
-            ]);
-            
-            $rewardId = $db->lastInsertId();
-            
-            // Fetch the created reward
-            $stmt = $db->prepare('SELECT * FROM sprakapp_referral_rewards WHERE id = ?');
-            $stmt->execute([$rewardId]);
-            $reward = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            echo json_encode(['success' => true, 'reward' => $reward]);
             break;
             
         case 'grant_trial_access':
@@ -603,12 +587,12 @@ try {
             $db->beginTransaction();
             
             try {
-                if ($reward['reward_type'] === 'free_month') {
-                    // Require course selection for free_month too
+                if ($reward['reward_type'] === 'free_days') {
+                    // Require course selection for free_days too
                     if (!$courseId) {
                         $db->rollBack();
                         http_response_code(400);
-                        echo json_encode(['error' => 'course_id required for free_month reward']);
+                        echo json_encode(['error' => 'course_id required for free_days reward']);
                         exit;
                     }
                     
@@ -622,9 +606,8 @@ try {
                         exit;
                     }
                     
-                    // Get chapter_limit from reward or config
-                    $config = getReferralConfig($db);
-                    $chapterLimit = $config['reward_chapter_limit'] ?? null;
+                    // Get chapter_limit from reward tier
+                    $chapterLimit = $reward['chapter_limit'] ?? null;
                     
                     // Grant time-limited access to selected course with chapter limit
                     $days = (int)$reward['reward_value'];
