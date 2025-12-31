@@ -171,12 +171,6 @@ function register($db) {
             'message' => 'Registration successful! Please check your email to verify your account.',
             'email' => $data->email,
             'email_verification_required' => true
-        sendSuccess([
-            'user' => [
-                'id' => $userId,
-                'email' => $data->email,
-                'role' => 'user'
-            ]
         ], 201);
         
     } catch (Exception $e) {
