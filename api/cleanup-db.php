@@ -1,6 +1,10 @@
 <?php
 header('Content-Type: application/json');
 
+// Aktivera error reporting för debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // Middleware
 require_once __DIR__ . '/../middleware/auth-middleware.php';
 
@@ -19,8 +23,19 @@ $conn = $db->getConnection();
 $action = $_GET['action'] ?? '';
 $limit = intval($_GET['limit'] ?? 100);
 
-// Tabeller och deras foreign keys till users
-$tables_with_user_fk = [
+// Funktion för att kontrollera om tabell existerar
+function tableExists($conn, $tableName) {
+    try {
+        $stmt = $conn->prepare("SHOW TABLES LIKE ?");
+        $stmt->execute([$tableName]);
+        return $stmt->rowCount() > 0;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+// Tabeller och deras foreign keys till users (kontrollera vilka som faktiskt existerar)
+$all_tables_with_user_fk = [
     'sprakapp_profiles' => 'id',
     'sprakapp_user_progress' => 'user_id',
     'sprakapp_exercise_attempts' => 'user_id',
@@ -32,48 +47,66 @@ $tables_with_user_fk = [
     'sprakapp_credit_transactions' => 'user_id',
 ];
 
+$tables_with_user_fk = [];
+foreach ($all_tables_with_user_fk as $table => $fk_column) {
+    if (tableExists($conn, $table)) {
+        $tables_with_user_fk[$table] = $fk_column;
+    }
+}
+
 try {
     if ($action === 'scan') {
         // Hitta orphaned records
         $results = [];
         
         foreach ($tables_with_user_fk as $table => $fk_column) {
-            // För sprakapp_profiles, använd FOREIGN KEY relation direkt
-            if ($table === 'sprakapp_profiles') {
-                $query = "SELECT COUNT(*) as count FROM $table WHERE id NOT IN (SELECT id FROM sprakapp_users)";
-            } else {
-                $query = "SELECT COUNT(*) as count FROM $table WHERE $fk_column NOT IN (SELECT id FROM sprakapp_users) OR $fk_column IS NULL";
-            }
-            
-            $stmt = $conn->prepare($query);
-            $stmt->execute();
-            $count = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-            
-            if ($count > 0) {
-                // Hämta exempel på orphaned records
+            try {
+                // För sprakapp_profiles, använd FOREIGN KEY relation direkt
                 if ($table === 'sprakapp_profiles') {
-                    $example_query = "SELECT id FROM $table WHERE id NOT IN (SELECT id FROM sprakapp_users) LIMIT 5";
+                    $query = "SELECT COUNT(*) as count FROM $table WHERE id NOT IN (SELECT id FROM sprakapp_users)";
                 } else {
-                    $example_query = "SELECT id, $fk_column FROM $table WHERE $fk_column NOT IN (SELECT id FROM sprakapp_users) OR $fk_column IS NULL LIMIT 5";
+                    $query = "SELECT COUNT(*) as count FROM $table WHERE $fk_column NOT IN (SELECT id FROM sprakapp_users) OR $fk_column IS NULL";
                 }
                 
-                $example_stmt = $conn->prepare($example_query);
-                $example_stmt->execute();
-                $examples = $example_stmt->fetchAll(PDO::FETCH_ASSOC);
+                $stmt = $conn->prepare($query);
+                $stmt->execute();
+                $count = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
                 
-                $results[] = [
-                    'table' => $table,
-                    'fk_column' => $fk_column,
-                    'orphaned_count' => $count,
-                    'examples' => $examples
-                ];
+                if ($count > 0) {
+                    // Hämta exempel på orphaned records
+                    if ($table === 'sprakapp_profiles') {
+                        $example_query = "SELECT id FROM $table WHERE id NOT IN (SELECT id FROM sprakapp_users) LIMIT 5";
+                    } else {
+                        $example_query = "SELECT id, $fk_column FROM $table WHERE $fk_column NOT IN (SELECT id FROM sprakapp_users) OR $fk_column IS NULL LIMIT 5";
+                    }
+                    
+                    $example_stmt = $conn->prepare($example_query);
+                    $example_stmt->execute();
+                    $examples = $example_stmt->fetchAll(PDO::FETCH_ASSOC);
+                    
+                    $results[] = [
+                        'table' => $table,
+                        'fk_column' => $fk_column,
+                        'orphaned_count' => $count,
+                        'examples' => $examples
+                    ];
+                }
+            } catch (Exception $e) {
+                error_log("Error processing table $table: " . $e->getMessage());
+                // Ignorera tabeller med fel och fortsätt med nästa
+                continue;
             }
         }
         
         echo json_encode([
             'status' => 'success',
             'orphaned_records' => $results,
-            'total_issues' => count($results)
+            'total_issues' => count($results),
+            'tables_checked' => array_keys($tables_with_user_fk),
+            'debug' => [
+                'available_tables' => array_keys($tables_with_user_fk),
+                'tables_skipped' => array_diff(array_keys($all_tables_with_user_fk), array_keys($tables_with_user_fk))
+            ]
         ]);
         
     } elseif ($action === 'clean') {
