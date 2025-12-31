@@ -5,20 +5,11 @@ header('Content-Type: application/json');
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Start session för auth
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Kontrollera admin-behörighet (samma som andra API:er använder)
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Unauthorized - Admin access required']);
-    exit;
-}
-
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../lib/auth.php';
+require_once __DIR__ . '/../middleware/session-auth.php';
+
+// Kontrollera admin-behörighet (samma som andra admin-API:er)
+$user = SessionAuth::requireAdmin();
 
 $db = new Database();
 $conn = $db->getConnection();
