@@ -145,7 +145,13 @@ function register($db) {
                 error_log('[Referral DEBUG] Successfully logged signup event');
             } else {
                 error_log('[Referral DEBUG] Failed to log signup event');
-            }nd verification email
+            }
+        }
+        
+        $db->commit();
+        error_log('[Referral DEBUG] Transaction committed successfully');
+        
+        // Send verification email
         try {
             $emailHelper = new EmailHelper();
             $emailSent = $emailHelper->sendVerificationEmail($data->email, $verificationToken);
