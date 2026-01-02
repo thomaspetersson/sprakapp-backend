@@ -206,20 +206,6 @@ function login($db) {
         sendError($check['reason'], 429); // 429 Too Many Requests
     }
     
-    // Check if CAPTCHA is required (Layer 4)
-    if ($check['requireCaptcha']) {
-        if (!isset($data->captcha_token)) {
-            sendError('CAPTCHA verification required', 403);
-        }
-        
-        // Verify CAPTCHA (you need to add your reCAPTCHA secret key to config)
-        $captchaSecret = getenv('RECAPTCHA_SECRET_KEY') ?: 'your-secret-key-here';
-        if (!$loginProtection->verifyCaptcha($data->captcha_token, $captchaSecret)) {
-            $loginProtection->recordFailedAttempt($data->email, $ipAddress, $userAgent);
-            sendError('CAPTCHA verification failed', 403);
-        }
-    }
-    
     // Apply progressive delay (Layer 3)
     $loginProtection->applyDelay($check['delay']);
     
