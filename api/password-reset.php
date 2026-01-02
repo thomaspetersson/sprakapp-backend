@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../middleware/rate-limit.php';
 
@@ -159,10 +161,6 @@ function sendPasswordResetEmail($email, $resetUrl, $token, $emailConfig) {
     $message .= "--{$boundary}--";
     
     return mail($email, $subject, $message, $headers);
-        
-    } catch (Exception $e) {
-        sendError('Password reset request failed: ' . $e->getMessage(), 500);
-    }
 }
 
 function resetPassword($db) {
@@ -214,8 +212,12 @@ function resetPassword($db) {
 }
 
 function changePassword($db) {
-    // Verify user is authenticated
-    $decoded = SessionAuth::verifySession();
+    // Verify user is authenticated with session
+    if (!isset($_SESSION['user_id'])) {
+        sendError('Not authenticated', 401);
+    }
+    
+    $userId = $_SESSION['user_id'];
     
     $data = json_decode(file_get_contents("php://input"));
     
@@ -231,22 +233,22 @@ function changePassword($db) {
         // Verify current password
         $query = "SELECT password_hash FROM sprakapp_users WHERE id = :id";
         $stmt = $db->prepare($query);
-        $stmt->bindParam(':id', $decoded['user_id']);
+        $stmt->bindParam(':id', $userId);
         $stmt->execute();
         
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if (!Auth::verifyPassword($data->currentPassword, $user['password_hash'])) {
+        if (!password_verify($data->currentPassword, $user['password_hash'])) {
             sendError('Current password is incorrect', 401);
         }
         
         // Update to new password
-        $passwordHash = Auth::hashPassword($data->newPassword);
+        $passwordHash = password_hash($data->newPassword, PASSWORD_DEFAULT);
         
         $query = "UPDATE sprakapp_users SET password_hash = :password_hash WHERE id = :id";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':password_hash', $passwordHash);
-        $stmt->bindParam(':id', $decoded['user_id']);
+        $stmt->bindParam(':id', $userId);
         $stmt->execute();
         
         sendSuccess(['message' => 'Password changed successfully']);

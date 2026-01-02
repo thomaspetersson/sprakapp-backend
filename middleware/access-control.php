@@ -21,9 +21,9 @@ class AccessControl {
         
         // Check if course exists and is published
         $stmt = $db->prepare("
-            SELECT id
+            SELECT id, status
             FROM sprakapp_courses 
-            WHERE id = ? AND is_published = 1
+            WHERE id = ? AND status = 'published'
         ");
         $stmt->execute([$courseId]);
         $course = $stmt->fetch(PDO::FETCH_OBJ);

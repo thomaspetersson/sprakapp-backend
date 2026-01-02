@@ -110,6 +110,7 @@ function register($db) {
         
         error_log('[Referral DEBUG] Creating user with trial_expires_at: ' . $trialExpiresAt);
         error_log('[Referral DEBUG] referred_by: ' . ($referrerId ?? 'NULL'));
+        error_log('[Registration] Generated verification token for: ' . $data->email);
         
         $db->beginTransaction();
         
@@ -133,7 +134,7 @@ function register($db) {
         $stmt->bindParam(':id', $userId);
         $stmt->execute();
         
-        // Log referral event if referred
+        // Log referral event if referred (but don't award rewards yet - wait for email verification)
         if ($referrerId) {
             $query = "INSERT INTO sprakapp_referral_events (referrer_user_id, invited_user_id, event_type) 
                       VALUES (:referrer_user_id, :invited_user_id, 'signup')";
@@ -175,7 +176,22 @@ function register($db) {
         
     } catch (Exception $e) {
         if ($db->inTransaction()) {
-            $db->rollBack();u.email_verified, p.role, p.first_name, p.last_name, p.avatar_url
+            $db->rollBack();
+        }
+        error_log('[Referral DEBUG] Registration failed with exception: ' . $e->getMessage());
+        sendError('Registration failed: ' . $e->getMessage(), 500);
+    }
+}
+
+function login($db) {
+    $data = json_decode(file_get_contents("php://input"));
+    
+    if (!isset($data->email) || !isset($data->password)) {
+        sendError('Email and password required', 400);
+    }
+
+    try {
+        $query = "SELECT u.id, u.email, u.password_hash, u.email_verified, p.role, p.first_name, p.last_name, p.avatar_url
                   FROM sprakapp_users u 
                   LEFT JOIN sprakapp_profiles p ON u.id = p.id 
                   WHERE u.email = :email";
@@ -195,22 +211,8 @@ function register($db) {
         
         // Check if email is verified
         if (!$user['email_verified']) {
-            sendError('Please verify your email address before logging in. Check your inbox for the verification link.', 403rd_hash, p.role, p.first_name, p.last_name, p.avatar_url
-                  FROM sprakapp_users u 
-                  LEFT JOIN sprakapp_profiles p ON u.id = p.id 
-                  WHERE u.email = :email";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':email', $data->email);
-        $stmt->execute();
-        
-        if ($stmt->rowCount() === 0) {
-            sendError('Invalid credentials', 401);
-        }
-        
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!password_verify($data->password, $user['password_hash'])) {
-            sendError('Invalid credentials', 401);
+            error_log('[Login] Email not verified for user: ' . $user['email']);
+            sendError('Please verify your email address before logging in. Check your inbox for the verification link.', 403);
         }
         
         // Set session
@@ -260,17 +262,20 @@ function register($db) {
         ]);
         
     } catch (Exception $e) {
+        error_log('[Login] Exception: ' . $e->getMessage());
         sendError('Login failed: ' . $e->getMessage(), 500);
     }
 }
 
 function getCurrentUser($db) {
     if (!isset($_SESSION['user_id'])) {
-        sendError('Not authenticated', 401);
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        exit;
     }
-    
+
     try {
-        $query = "SELECT u.id, u.email, p.first_name, p.last_name, p.avatar_url, p.role 
+        $query = "SELECT u.id, u.email, p.role, p.first_name, p.last_name, p.avatar_url
                   FROM sprakapp_users u 
                   LEFT JOIN sprakapp_profiles p ON u.id = p.id 
                   WHERE u.id = :id";
@@ -278,16 +283,27 @@ function getCurrentUser($db) {
         $stmt->bindParam(':id', $_SESSION['user_id']);
         $stmt->execute();
         
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$user) {
-            sendError('User not found', 404);
+        if ($stmt->rowCount() === 0) {
+            session_destroy();
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'User not found']);
+            exit;
         }
         
-        sendSuccess($user);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
+        sendSuccess([
+            'user' => [
+                'id' => $user['id'],
+                'email' => $user['email'],
+                'role' => $user['role'] ?? 'user',
+                'first_name' => $user['first_name'],
+                'last_name' => $user['last_name'],
+                'avatar_url' => $user['avatar_url']
+            ]
+        ]);
     } catch (Exception $e) {
-        sendError('Failed to fetch user: ' . $e->getMessage(), 500);
+        sendError('Failed to get user: ' . $e->getMessage(), 500);
     }
 }
 
