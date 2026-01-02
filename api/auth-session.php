@@ -14,6 +14,8 @@ switch ($method) {
     case 'POST':
         if (isset($_GET['action']) && $_GET['action'] === 'register') {
             register($db);
+        } elseif (isset($_GET['action']) && $_GET['action'] === 'impersonate') {
+            impersonateUser($db);
         } else {
             login($db);
         }
@@ -339,4 +341,82 @@ function getCurrentUser($db) {
 function logout() {
     session_destroy();
     sendSuccess(['message' => 'Logged out successfully']);
+}
+
+function impersonateUser($db) {
+    // Verify admin is logged in
+    if (!isset($_SESSION['user_id'])) {
+        sendError('Not authenticated', 401);
+    }
+    
+    try {
+        // Check if current user is admin
+        $query = "SELECT p.role FROM sprakapp_profiles p WHERE p.id = :id";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':id', $_SESSION['user_id']);
+        $stmt->execute();
+        $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$currentUser || $currentUser['role'] !== 'admin') {
+            error_log('[Impersonate] Non-admin user attempted impersonation: ' . $_SESSION['user_id']);
+            sendError('Only admins can impersonate users', 403);
+        }
+        
+        $data = json_decode(file_get_contents("php://input"));
+        
+        if (!isset($data->user_id)) {
+            sendError('User ID required', 400);
+        }
+        
+        // Get target user
+        $query = "SELECT u.id, u.email, u.email_verified, p.role, p.first_name, p.last_name, p.avatar_url
+                  FROM sprakapp_users u 
+                  LEFT JOIN sprakapp_profiles p ON u.id = p.id 
+                  WHERE u.id = :target_id";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':target_id', $data->user_id);
+        $stmt->execute();
+        
+        if ($stmt->rowCount() === 0) {
+            sendError('Target user not found', 404);
+        }
+        
+        $targetUser = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Security: Don't allow impersonating another admin (optional - you can remove this check)
+        if ($targetUser['role'] === 'admin' && $targetUser['id'] !== $_SESSION['user_id']) {
+            error_log('[Impersonate] Admin attempted to impersonate another admin: ' . $_SESSION['user_id'] . ' -> ' . $targetUser['id']);
+            sendError('Cannot impersonate another admin', 403);
+        }
+        
+        // Log the impersonation for audit trail
+        error_log('[Impersonate] Admin ' . $_SESSION['user_id'] . ' (' . $_SESSION['email'] . ') impersonating user ' . $targetUser['id'] . ' (' . $targetUser['email'] . ')');
+        
+        // Store original admin info before switching
+        $_SESSION['impersonating'] = true;
+        $_SESSION['original_admin_id'] = $_SESSION['user_id'];
+        $_SESSION['original_admin_email'] = $_SESSION['email'];
+        
+        // Switch session to target user
+        $_SESSION['user_id'] = $targetUser['id'];
+        $_SESSION['email'] = $targetUser['email'];
+        $_SESSION['role'] = $targetUser['role'] ?? 'user';
+        
+        sendSuccess([
+            'user' => [
+                'id' => $targetUser['id'],
+                'email' => $targetUser['email'],
+                'role' => $targetUser['role'] ?? 'user',
+                'first_name' => $targetUser['first_name'],
+                'last_name' => $targetUser['last_name'],
+                'avatar_url' => $targetUser['avatar_url']
+            ],
+            'impersonating' => true,
+            'original_admin' => $_SESSION['original_admin_email']
+        ]);
+        
+    } catch (Exception $e) {
+        error_log('[Impersonate] Exception: ' . $e->getMessage());
+        sendError('Impersonation failed: ' . $e->getMessage(), 500);
+    }
 }
