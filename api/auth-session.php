@@ -4,6 +4,7 @@ session_start();
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../lib/EmailHelper.php';
+require_once __DIR__ . '/../middleware/login-protection.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
@@ -190,6 +191,41 @@ function login($db) {
         sendError('Email and password required', 400);
     }
 
+    // Initialize login protection
+    $loginProtection = new LoginProtection($db);
+    
+    // Get client information
+    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    $sessionId = session_id();
+    
+    // Check if login attempt is allowed (Layer 1 & 2)
+    $check = $loginProtection->checkLoginAllowed($data->email, $ipAddress, $sessionId);
+    
+    if (!$check['allowed']) {
+        sendError($check['reason'], 429); // 429 Too Many Requests
+    }
+    
+    // Check if CAPTCHA is required (Layer 4)
+    if ($check['requireCaptcha']) {
+        if (!isset($data->captcha_token)) {
+            sendError('CAPTCHA verification required', 403);
+        }
+        
+        // Verify CAPTCHA (you need to add your reCAPTCHA secret key to config)
+        $captchaSecret = getenv('RECAPTCHA_SECRET_KEY') ?: 'your-secret-key-here';
+        if (!$loginProtection->verifyCaptcha($data->captcha_token, $captchaSecret)) {
+            $loginProtection->recordFailedAttempt($data->email, $ipAddress, $userAgent);
+            sendError('CAPTCHA verification failed', 403);
+        }
+    }
+    
+    // Apply progressive delay (Layer 3)
+    $loginProtection->applyDelay($check['delay']);
+    
+    // Record this login attempt in session
+    $loginProtection->recordSessionAttempt();
+
     try {
         $query = "SELECT u.id, u.email, u.password_hash, u.email_verified, p.role, p.first_name, p.last_name, p.avatar_url
                   FROM sprakapp_users u 
@@ -200,14 +236,21 @@ function login($db) {
         $stmt->execute();
         
         if ($stmt->rowCount() === 0) {
+            // Record failed attempt (Layer 5)
+            $loginProtection->recordFailedAttempt($data->email, $ipAddress, $userAgent);
             sendError('Invalid credentials', 401);
         }
         
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!password_verify($data->password, $user['password_hash'])) {
+            // Record failed attempt (Layer 5)
+            $loginProtection->recordFailedAttempt($data->email, $ipAddress, $userAgent);
             sendError('Invalid credentials', 401);
         }
+        
+        // Clear failed attempts on successful login
+        $loginProtection->clearFailedAttempts($data->email);
         
         // Check if email is verified
         if (!$user['email_verified']) {
