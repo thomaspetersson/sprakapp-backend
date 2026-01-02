@@ -3,6 +3,9 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/stripe-config.php';
+require_once __DIR__ . '/../lib/ActivityLogger.php';
+
+$activityLogger = new ActivityLogger();
 
 // Custom logging to file
 function logWebhook($message) {
@@ -179,6 +182,16 @@ try {
                 if ($sub) {
                     $userId = $sub['user_id'];
                     
+                    // Get user email for logging
+                    $stmtUser = $db->prepare('SELECT email FROM sprakapp_users WHERE id = ?');
+                    $stmtUser->execute([$userId]);
+                    $userEmail = $stmtUser->fetchColumn();
+                    
+                    // Get plan name
+                    $stmtPlan = $db->prepare('SELECT p.name FROM sprakapp_user_subscriptions us JOIN sprakapp_subscription_plans p ON us.plan_id = p.id WHERE us.id = ?');
+                    $stmtPlan->execute([$userSubscriptionId]);
+                    $planName = $stmtPlan->fetchColumn();
+                    
                     // Grant access to all chosen courses
                     $stmt = $db->prepare('SELECT course_id FROM sprakapp_user_subscription_courses WHERE user_subscription_id = ?');
                     $stmt->execute([$userSubscriptionId]);
@@ -187,7 +200,28 @@ try {
                     foreach ($courses as $courseId) {
                         assignCourseAccess($db, $userId, $courseId, $subscriptionId, $customerId);
                         logWebhook("Granted access: User $userId -> Course $courseId");
+                        
+                        // Get course name
+                        $stmtCourse = $db->prepare('SELECT title FROM sprakapp_courses WHERE id = ?');
+                        $stmtCourse->execute([$courseId]);
+                        $courseTitle = $stmtCourse->fetchColumn();
+                        
+                        // Log course access granted
+                        global $activityLogger;
+                        $activityLogger->courseAccessGranted($userId, $userEmail, $courseId, $courseTitle, [
+                            'reason' => 'subscription_payment',
+                            'subscription_id' => $subscriptionId,
+                            'plan_name' => $planName
+                        ]);
                     }
+                    
+                    // Log subscription created
+                    $activityLogger->subscriptionCreated($userId, $userEmail, $subscriptionId, $planName, count($courses));
+                    
+                    // Log payment success
+                    $amount = $session->amount_total / 100; // Convert from cents
+                    $currency = strtoupper($session->currency);
+                    $activityLogger->paymentSuccess($userId, $userEmail, $subscriptionId, $amount, $currency);
                 }
             } else {
                 // Old flow: single course assignment (deprecated)
@@ -211,6 +245,20 @@ try {
             
             if (revokeCourseAccess($db, $subscriptionId)) {
                 error_log("Course access revoked for subscription: $subscriptionId");
+                
+                // Get user details for logging
+                $stmt = $db->prepare('SELECT us.user_id, u.email, p.name as plan_name 
+                                     FROM sprakapp_user_subscriptions us 
+                                     JOIN sprakapp_users u ON us.user_id = u.id 
+                                     JOIN sprakapp_subscription_plans p ON us.plan_id = p.id 
+                                     WHERE us.stripe_subscription_id = ?');
+                $stmt->execute([$subscriptionId]);
+                $subData = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($subData) {
+                    global $activityLogger;
+                    $activityLogger->subscriptionCancelled($subData['user_id'], $subData['email'], $subscriptionId, $subData['plan_name']);
+                }
             } else {
                 error_log("Failed to revoke course access for subscription: $subscriptionId");
             }
@@ -223,6 +271,24 @@ try {
             
             if ($subscriptionId && extendCourseAccess($db, $subscriptionId)) {
                 error_log("Course access extended for subscription: $subscriptionId");
+                
+                // Get user details for logging
+                $stmt = $db->prepare('SELECT us.user_id, u.email, p.name as plan_name 
+                                     FROM sprakapp_user_subscriptions us 
+                                     JOIN sprakapp_users u ON us.user_id = u.id 
+                                     JOIN sprakapp_subscription_plans p ON us.plan_id = p.id 
+                                     WHERE us.stripe_subscription_id = ?');
+                $stmt->execute([$subscriptionId]);
+                $subData = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($subData) {
+                    global $activityLogger;
+                    $amount = $invoice->amount_paid / 100;
+                    $currency = strtoupper($invoice->currency);
+                    
+                    $activityLogger->subscriptionRenewed($subData['user_id'], $subData['email'], $subscriptionId, $subData['plan_name']);
+                    $activityLogger->paymentSuccess($subData['user_id'], $subData['email'], $subscriptionId, $amount, $currency);
+                }
             }
             break;
             
@@ -233,6 +299,23 @@ try {
             
             // TODO: Optionally suspend access after failed payment
             error_log("Payment failed for subscription: $subscriptionId");
+            
+            // Get user details for logging
+            $stmt = $db->prepare('SELECT us.user_id, u.email 
+                                 FROM sprakapp_user_subscriptions us 
+                                 JOIN sprakapp_users u ON us.user_id = u.id 
+                                 WHERE us.stripe_subscription_id = ?');
+            $stmt->execute([$subscriptionId]);
+            $subData = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($subData) {
+                global $activityLogger;
+                $amount = $invoice->amount_due / 100;
+                $currency = strtoupper($invoice->currency);
+                $reason = $invoice->last_payment_error->message ?? 'Unknown error';
+                
+                $activityLogger->paymentFailed($subData['user_id'], $subData['email'], $subscriptionId, $amount, $currency, $reason);
+            }
             break;
             
         default:

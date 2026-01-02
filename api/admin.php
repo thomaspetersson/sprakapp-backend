@@ -6,6 +6,9 @@ ini_set('log_errors', 1);
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../middleware/session-auth.php';
+require_once __DIR__ . '/../lib/ActivityLogger.php';
+
+$activityLogger = new ActivityLogger();
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
@@ -146,6 +149,24 @@ function assignCourseToUser($db) {
             $stmt->bindParam(':chapter_limit', $chapter_limit, PDO::PARAM_INT);
             $stmt->execute();
             
+            // Get user and course details for logging
+            $stmtUser = $db->prepare('SELECT email FROM sprakapp_users WHERE id = ?');
+            $stmtUser->execute([$data->user_id]);
+            $userEmail = $stmtUser->fetchColumn();
+            
+            $stmtCourse = $db->prepare('SELECT title FROM sprakapp_courses WHERE id = ?');
+            $stmtCourse->execute([$data->course_id]);
+            $courseTitle = $stmtCourse->fetchColumn();
+            
+            // Log course access granted by admin
+            global $activityLogger;
+            $activityLogger->courseAccessGranted($data->user_id, $userEmail, $data->course_id, $courseTitle, [
+                'reason' => 'admin_grant',
+                'start_date' => $start_date,
+                'end_date' => $end_date,
+                'chapter_limit' => $chapter_limit
+            ]);
+            
             sendSuccess(['message' => 'Course assigned to user'], 201);
         }
         
@@ -162,6 +183,15 @@ function revokeCourseFromUser($db) {
     }
     
     try {
+        // Get details before deletion for logging
+        $stmtDetails = $db->prepare('SELECT u.email, c.title 
+                                     FROM sprakapp_user_course_access uca
+                                     JOIN sprakapp_users u ON uca.user_id = u.id
+                                     JOIN sprakapp_courses c ON uca.course_id = c.id
+                                     WHERE uca.user_id = ? AND uca.course_id = ?');
+        $stmtDetails->execute([$data->user_id, $data->course_id]);
+        $details = $stmtDetails->fetch(PDO::FETCH_ASSOC);
+        
         $query = "DELETE FROM sprakapp_user_course_access WHERE user_id = :user_id AND course_id = :course_id";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':user_id', $data->user_id);
@@ -170,6 +200,12 @@ function revokeCourseFromUser($db) {
         
         if ($stmt->rowCount() === 0) {
             sendError('Course assignment not found', 404);
+        }
+        
+        // Log course access revoked by admin
+        if ($details) {
+            global $activityLogger;
+            $activityLogger->courseAccessRevoked($data->user_id, $details['email'], $data->course_id, $details['title'], 'admin_revoke');
         }
         
         sendSuccess(['message' => 'Course access revoked']);

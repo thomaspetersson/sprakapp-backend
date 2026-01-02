@@ -5,10 +5,12 @@ session_start();
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../lib/EmailHelper.php';
 require_once __DIR__ . '/../middleware/login-protection.php';
+require_once __DIR__ . '/../lib/ActivityLogger.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $database = new Database();
 $db = $database->getConnection();
+$activityLogger = new ActivityLogger();
 
 switch ($method) {
     case 'POST':
@@ -155,6 +157,19 @@ function register($db) {
         $db->commit();
         error_log('[Referral DEBUG] Transaction committed successfully');
         
+        // Log activity
+        global $activityLogger;
+        $activityLogger->userRegistered($userId, $data->email, $referrerId, $trialDays);
+        if ($referrerId) {
+            // Get referrer email
+            $stmt = $db->prepare("SELECT email FROM sprakapp_users WHERE id = ?");
+            $stmt->execute([$referrerId]);
+            $referrer = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($referrer) {
+                $activityLogger->referralUsed($referrerId, $referrer['email'], $userId, $data->email);
+            }
+        }
+        
         // Send verification email
         try {
             $emailHelper = new EmailHelper();
@@ -250,6 +265,10 @@ function login($db) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['email'] = $user['email'];
         $_SESSION['role'] = $user['role'] ?? 'user';
+        
+        // Log activity
+        global $activityLogger;
+        $activityLogger->userLoggedIn($user['id'], $user['email']);
         
         // Auto-complete onboarding on first login if user was referred
         $query = "SELECT referred_by, onboarding_completed FROM sprakapp_users WHERE id = :id";
@@ -391,6 +410,10 @@ function impersonateUser($db) {
         
         // Log the impersonation for audit trail
         error_log('[Impersonate] Admin ' . $_SESSION['user_id'] . ' (' . $_SESSION['email'] . ') impersonating user ' . $targetUser['id'] . ' (' . $targetUser['email'] . ')');
+        
+        // Log activity
+        global $activityLogger;
+        $activityLogger->adminImpersonated($_SESSION['user_id'], $_SESSION['email'], $targetUser['id'], $targetUser['email']);
         
         // Store original admin info before switching
         $_SESSION['impersonating'] = true;

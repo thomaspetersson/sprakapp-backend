@@ -15,6 +15,9 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../middleware/session-auth.php';
 require_once __DIR__ . '/../lib/reward-tiers.php';
+require_once __DIR__ . '/../lib/ActivityLogger.php';
+
+$activityLogger = new ActivityLogger();
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -550,6 +553,20 @@ try {
             ');
             $stmt->execute([$user->user_id, $courseId, $trialExpiresAt, $trialChapterLimit, $trialExpiresAt, $trialChapterLimit]);
             
+            // Get user email and course title for logging
+            $stmtUser = $db->prepare('SELECT email FROM sprakapp_users WHERE id = ?');
+            $stmtUser->execute([$user->user_id]);
+            $userEmail = $stmtUser->fetchColumn();
+            
+            $stmtCourse = $db->prepare('SELECT title FROM sprakapp_courses WHERE id = ?');
+            $stmtCourse->execute([$courseId]);
+            $courseTitle = $stmtCourse->fetchColumn();
+            
+            // Log trial course selection
+            global $activityLogger;
+            $activityLogger->courseSelected($user->user_id, $userEmail, $courseId, $courseTitle, 'trial');
+            $activityLogger->trialStarted($user->user_id, $userEmail, $trialExpiresAt, $trialChapterLimit);
+            
             echo json_encode([
                 'success' => true, 
                 'message' => 'Trial course access granted',
@@ -620,6 +637,25 @@ try {
                             subscription_status = "active"
                     ');
                     $stmt->execute([$user->user_id, $courseId, $days, $days]);
+                    
+                    // Get details for logging
+                    $stmtUser = $db->prepare('SELECT email FROM sprakapp_users WHERE id = ?');
+                    $stmtUser->execute([$user->user_id]);
+                    $userEmail = $stmtUser->fetchColumn();
+                    
+                    $stmtCourse = $db->prepare('SELECT title FROM sprakapp_courses WHERE id = ?');
+                    $stmtCourse->execute([$courseId]);
+                    $courseTitle = $stmtCourse->fetchColumn();
+                    
+                    // Log reward course access
+                    global $activityLogger;
+                    $activityLogger->courseSelected($user->user_id, $userEmail, $courseId, $courseTitle, 'referral_reward');
+                    $activityLogger->courseAccessGranted($user->user_id, $userEmail, $courseId, $courseTitle, [
+                        'reason' => 'referral_reward',
+                        'days' => $days,
+                        'chapter_limit' => $chapterLimit,
+                        'reward_id' => $rewardId
+                    ]);
                     
                     // Update reward with course selection and chapter limit
                     $stmt = $db->prepare('
