@@ -23,8 +23,10 @@ class LoginProtection {
         // Configuration
         $this->config = [
             // Rate limiting
-            'max_attempts_per_ip' => 20,      // Max attempts per IP in time window
+            'max_attempts_per_ip' => 100,     // Max attempts per IP (generous for shared IPs)
             'ip_time_window' => 900,          // 15 minutes in seconds
+            'max_attempts_per_email' => 5,    // Max attempts per email address
+            'email_time_window' => 300,       // 5 minutes in seconds
             'max_attempts_per_session' => 5,  // Max attempts per session
             'session_time_window' => 300,     // 5 minutes in seconds
             
@@ -47,7 +49,20 @@ class LoginProtection {
      * Returns: ['allowed' => bool, 'reason' => string, 'requireCaptcha' => bool, 'delay' => int]
      */
     public function checkLoginAllowed($email, $ipAddress, $sessionId) {
-        // Layer 1: Check IP rate limit
+        // Layer 1a: Check email-specific rate limit (most important)
+        if (!empty($email)) {
+            $emailAttempts = $this->getEmailAttempts($email, $this->config['email_time_window']);
+            if ($emailAttempts >= $this->config['max_attempts_per_email']) {
+                return [
+                    'allowed' => false,
+                    'reason' => 'Too many failed attempts for this account. Please try again in a few minutes.',
+                    'requireCaptcha' => true,
+                    'delay' => 0
+                ];
+            }
+        }
+        
+        // Layer 1b: Check IP rate limit (generous for shared IPs)
         $ipAttempts = $this->getIPAttempts($ipAddress);
         if ($ipAttempts >= $this->config['max_attempts_per_ip']) {
             return [
@@ -58,7 +73,7 @@ class LoginProtection {
             ];
         }
         
-        // Layer 1b: Check session rate limit
+        // Layer 1c: Check session rate limit
         $sessionAttempts = $this->getSessionAttempts($sessionId);
         if ($sessionAttempts >= $this->config['max_attempts_per_session']) {
             return [
@@ -83,18 +98,18 @@ class LoginProtection {
             }
         }
         
-        // Layer 3: Calculate progressive delay
-        $totalAttempts = max($ipAttempts, $sessionAttempts);
+        // Layer 3: Calculate progressive delay based on email attempts
+        $emailAttempts = !empty($email) ? $this->getEmailAttempts($email, $this->config['email_time_window']) : 0;
         $delay = 0;
-        if ($totalAttempts >= $this->config['delay_after_attempts']) {
+        if ($emailAttempts >= $this->config['delay_after_attempts']) {
             $delay = min(
                 $this->config['max_delay'],
-                $this->config['min_delay'] + ($totalAttempts - $this->config['delay_after_attempts'])
+                $this->config['min_delay'] + ($emailAttempts - $this->config['delay_after_attempts'])
             );
         }
         
         // Layer 4: Check if CAPTCHA required
-        $requireCaptcha = $totalAttempts >= $this->config['captcha_after_attempts'];
+        $requireCaptcha = $emailAttempts >= $this->config['captcha_after_attempts'];
         
         return [
             'allowed' => true,
