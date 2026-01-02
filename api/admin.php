@@ -46,11 +46,12 @@ switch ($method) {
 
 function getAllProfiles($db) {
     try {
-        $query = "SELECT p.id, p.first_name, p.last_name, p.avatar_url, p.role, u.email, p.created_at,
-                  (SELECT COUNT(*) FROM sprakapp_user_course_access uc WHERE uc.user_id = p.id AND uc.subscription_status = 'active') as active_subscriptions
-                  FROM sprakapp_profiles p
-                  LEFT JOIN sprakapp_users u ON p.id = u.id
-                  ORDER BY p.created_at DESC";
+        $query = "SELECT u.id, u.email, u.created_at, p.first_name, p.last_name, p.avatar_url, 
+                  COALESCE(p.role, 'user') as role,
+                  (SELECT COUNT(*) FROM sprakapp_user_course_access uc WHERE uc.user_id = u.id AND uc.subscription_status = 'active') as active_subscriptions
+                  FROM sprakapp_users u
+                  LEFT JOIN sprakapp_profiles p ON u.id = p.id
+                  ORDER BY u.created_at DESC";
         $stmt = $db->prepare($query);
         $stmt->execute();
         
